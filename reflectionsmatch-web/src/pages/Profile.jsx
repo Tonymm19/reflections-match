@@ -42,6 +42,7 @@ const Profile = ({ user }) => {
     const [analyzing, setAnalyzing] = useState(false);
     const [lastAnalyzed, setLastAnalyzed] = useState(null);
     const [lastAnalysisCount, setLastAnalysisCount] = useState(0); // NEW: Track count
+    const [currentReflectionCount, setCurrentReflectionCount] = useState(0); // NEW: Live count for levels
     const [toastMessage, setToastMessage] = useState(null); // NEW: Toast state
 
     // Helper for Toast
@@ -71,6 +72,11 @@ const Profile = ({ user }) => {
                     if (data.linkedinProfileData) setLinkedInData(data.linkedinProfileData); // NEW
                     if (data.resumeText) setResumeText(data.resumeText); // Fetch resume text
                     if (data.lastAnalysisCount) setLastAnalysisCount(data.lastAnalysisCount); // Fetch count
+
+                    // Fetch live reflection count for level logic
+                    const q = query(collection(db, 'reflections'), where("userId", "==", user.uid));
+                    const snapshot = await getDocs(q);
+                    setCurrentReflectionCount(snapshot.size);
 
                     // Parse stored JSON string if it exists
                     if (data.aiPersona) {
@@ -494,12 +500,77 @@ const Profile = ({ user }) => {
                                     {tagline || "No tagline set"}
                                 </p>
 
-                                {/* Stats Row */}
-                                <div className="flex items-center gap-2 text-sm text-gray-400 font-medium">
-                                    <span>{lastAnalysisCount || 0} Reflections</span>
-                                    <span>•</span>
-                                    <span>5 Active Pursuits</span>
-                                </div>
+                                {/* Stats & Level Logic */}
+                                {(() => {
+                                    // Level Calculation Logic
+                                    let levelName = "";
+                                    let nextLevelName = "";
+                                    let levelColor = "";
+                                    let progress = 0;
+                                    let target = 10;
+
+                                    // Tiers:
+                                    // 0-10: GENESIS (Next: Catalyst)
+                                    // 10-25: CATALYST (Next: Clarity)
+                                    // 25-50: CLARITY (Next: Radiance)
+                                    // 50-100: RADIANCE (Next: Essence)
+                                    // 100+: ESSENCE
+
+                                    if (currentReflectionCount < 10) {
+                                        levelName = "GENESIS";
+                                        nextLevelName = "Catalyst";
+                                        levelColor = "bg-gray-100 text-gray-600 border border-gray-200";
+                                        target = 10;
+                                    } else if (currentReflectionCount < 25) {
+                                        levelName = "CATALYST";
+                                        nextLevelName = "Clarity";
+                                        levelColor = "bg-blue-50 text-blue-600 border border-blue-200";
+                                        target = 25;
+                                    } else if (currentReflectionCount < 50) {
+                                        levelName = "CLARITY";
+                                        nextLevelName = "Radiance";
+                                        levelColor = "bg-purple-50 text-purple-600 border border-purple-200";
+                                        target = 50;
+                                    } else if (currentReflectionCount < 100) {
+                                        levelName = "RADIANCE";
+                                        nextLevelName = "Essence";
+                                        levelColor = "bg-yellow-50 text-yellow-600 border border-yellow-200";
+                                        target = 100;
+                                    } else {
+                                        levelName = "ESSENCE";
+                                        levelColor = "bg-gradient-to-r from-cyan-200 via-purple-200 to-yellow-200 text-gray-800 border-none shadow-sm";
+                                        target = 100;
+                                    }
+
+                                    // Cumulative Percentage Logic
+                                    // (Current Total / Next Milestone Target) * 100
+                                    progress = Math.min((currentReflectionCount / target) * 100, 100);
+
+                                    return (
+                                        <div className="w-full mt-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${levelColor}`}>
+                                                    {levelName} LEVEL
+                                                </div>
+                                                <span className="text-xs font-bold text-gray-600">
+                                                    {currentReflectionCount} / {currentReflectionCount < 100 ? target : "∞"}
+                                                </span>
+                                            </div>
+                                            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full transition-all duration-1000 ease-out rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 ${currentReflectionCount >= 100 ? 'animate-pulse' : ''}`}
+                                                    style={{ width: `${progress}%` }}
+                                                ></div>
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 mt-1 text-right">
+                                                {currentReflectionCount < 100
+                                                    ? `${currentReflectionCount} reflections captured—${target - currentReflectionCount} more to reach ${nextLevelName}.`
+                                                    : "Essence Synchronized."
+                                                }
+                                            </p>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         )}
                         {/* Email removed as requested */}

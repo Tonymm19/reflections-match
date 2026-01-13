@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { collection, addDoc, serverTimestamp, setDoc, doc } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, setDoc, doc, getCountFromServer, query, where, updateDoc } from 'firebase/firestore'
 import { storage, db, auth } from './firebaseConfig'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, type User, createUserWithEmailAndPassword } from 'firebase/auth'
 import { canvasPreview } from './canvasPreview'
@@ -67,6 +67,8 @@ function App() {
   // Upload state
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [isBursting, setIsBursting] = useState(false); // NEW
+  const [buttonText, setButtonText] = useState("Save Reflection"); // NEW
 
   // Check URL on mount
   useEffect(() => {
@@ -223,7 +225,26 @@ function App() {
       const snapshot = await uploadBytes(storageRef, blob);
       const downloadUrl = await getDownloadURL(snapshot.ref);
 
-      // 2. Save Data (Including user notes)
+      // 2. Milestone Logic (Check Count BEFORE or parallel)
+      // We need to count existing reflections for this user
+      let milestoneReached = null;
+      let currentReflectionCount = 0;
+
+      try {
+        const q = query(collection(db, "reflections"), where("userId", "==", user?.uid));
+        const snapshot = await getCountFromServer(q);
+        const currentCount = snapshot.data().count;
+        const newCount = currentCount + 1; // Anticipating this add
+        currentReflectionCount = newCount;
+
+        if (newCount === 10 || newCount === 25) {
+          milestoneReached = newCount;
+        }
+      } catch (err) {
+        console.error("Error checking milestone:", err);
+      }
+
+      // 3. Save Data (Including user notes)
       console.log("Uploading Reflection for UserID:", user?.uid);
       await addDoc(collection(db, "reflections"), {
         imageUrl: downloadUrl,
@@ -233,8 +254,22 @@ function App() {
         userId: user?.uid // Use real User ID
       });
 
-      // 3. Success
+      // 4. Update User Doc if Milestone Reached
+      if (milestoneReached && user?.uid) {
+        await updateDoc(doc(db, "users", user.uid), {
+          milestoneReached: milestoneReached // Simple flag or value
+        });
+      }
+
+      // 5. Success Feedback
       setUploadSuccess(true);
+      if (currentReflectionCount === 1) {
+        setButtonText("1st Reflection Captured! ✨");
+      } else {
+        setButtonText("Captured! ✨");
+      }
+      setIsBursting(true);
+
       setTimeout(() => {
         clearScreenshot();
         window.close();
@@ -245,6 +280,7 @@ function App() {
       setError('Upload failed: ' + err.message);
     } finally {
       setUploading(false);
+      // Reset generic state if needed, but window closing soon
     }
   };
 
@@ -340,7 +376,39 @@ function App() {
               </div>
             )}
             <div className="action-buttons">
-              <button className="primary-button upload-btn" onClick={handleUpload} disabled={uploading}>{uploading ? 'Saving...' : 'Save Reflection'}</button>
+              <button className="primary-button upload-btn" onClick={handleUpload} disabled={uploading} style={{ position: 'relative', overflow: 'visible' }}>
+                {uploading ? 'Saving...' : buttonText}
+
+                {/* Particle Burst */}
+                {isBursting && (
+                  <>
+                    {[...Array(12)].map((_, i) => {
+                      const colors = ['#00FFFF', '#FF00FF', '#32CD32', '#FFE600'];
+                      const angle = (i / 12) * 360;
+                      const delay = Math.random() * 0.2;
+                      return (
+                        <div
+                          key={i}
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: colors[i % 4],
+                            animation: `particle-burst 0.8s ease-out forwards ${delay}s`,
+                            transform: `translate(-50%, -50%) rotate(${angle}deg) translate(0px)`,
+                            pointerEvents: 'none',
+                            zIndex: 999,
+                            '--angle': `${angle}deg`
+                          } as React.CSSProperties}
+                        />
+                      );
+                    })}
+                  </>
+                )}
+              </button>
               <button className="secondary-button reset-btn" onClick={clearScreenshot} disabled={uploading}>Reset</button>
             </div>
           </div>

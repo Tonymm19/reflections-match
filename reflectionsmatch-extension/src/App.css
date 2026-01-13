@@ -205,3 +205,15 @@ footer {
 .notes-input::placeholder {
     color: #9CA3AF;
 }
+
+@keyframes particle-burst {
+    0% {
+        transform: translate(-50%, -50%) rotate(var(--angle)) translate(0px);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) rotate(var(--angle)) translate(60px);
+        opacity: 0;
+    }
+}
