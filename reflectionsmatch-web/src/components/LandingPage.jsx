@@ -37,9 +37,9 @@ const LandingPage = () => {
                     <div className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer">
                         <div className="h-10 w-10 rounded-full overflow-hidden border border-white/20 shadow-sm relative">
                             <img
-                                src="/logo-final.jpg"
+                                src="/landing-fingerprint.png"
                                 alt="Reflections Match"
-                                className="absolute inset-0 h-full w-full object-cover scale-150"
+                                className="absolute inset-0 h-full w-full object-cover"
                             />
                         </div>
                         <span className="font-bold text-gray-700 tracking-tight hidden md:block">Reflections Match</span>

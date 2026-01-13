@@ -275,7 +275,7 @@ const Dashboard = ({ user }) => {
                                     ? "100 Reflections. You have reached the final state. Your Digital Twin is now a pure reflection of your Essence—a living archive of your world."
                                     : milestone === 10
                                         ? "You've captured 10 reflections. Your digital twin is beginning to take shape."
-                                        : "25 reflections captured. The patterns in your interests are becoming undeniable."}
+                                        : "25 reflections captured. The patterns in your world are becoming clear, unlocking deeper insights into your unique digital identity."}
                             </p>
                             <button
                                 onClick={handleClearMilestone}
