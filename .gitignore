@@ -1,0 +1,14 @@
+# Ignore dependencies in all subfolders
+**/node_modules
+**/dist
+**/build
+**/coverage
+
+# SECURITY: Ignore environment variables in all folders
+**/.env
+**/.env.local
+**/.env.*
+
+# Ignore system files
+.DS_Store
+Thumbs.db

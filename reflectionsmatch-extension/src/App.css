@@ -1,0 +1,214 @@
+html,
+body {
+    width: 400px;
+    /* Fixed width as requested */
+    height: 600px;
+    /* Max Chrome extension height */
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    /* Allow scroll if needed */
+    /* Prevent scroll on body, let main handle it */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+#root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.App {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Center all items horizontally */
+    gap: 8px;
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    /* Ensure text is centered */
+}
+
+.app-header h1 {
+    margin: 0;
+    color: #2563EB;
+    /* Brand Blue */
+    font-size: 1.1rem;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: #6B7280;
+    font-size: 0.9rem;
+}
+
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    overflow-y: auto;
+    /* Safety net: Scroll if content gets too tall */
+    padding-bottom: 20px;
+    /* Ensure bottom breathing room */
+}
+
+.capture-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.primary-button {
+    background-color: #2563EB;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 100%;
+    /* max-width: 300px; Removed to fill space */
+}
+
+.primary-button:hover {
+    background-color: #1D4ED8;
+}
+
+.primary-button:disabled {
+    background-color: #93C5FD;
+    cursor: not-allowed;
+}
+
+.secondary-button {
+    background-color: transparent;
+    color: #6B7280;
+    border: 1px solid #D1D5DB;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.secondary-button:hover {
+    background-color: #F3F4F6;
+    color: #374151;
+}
+
+.preview-container {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    /* Changed from center to stretch */
+    gap: 12px;
+    width: 100%;
+}
+
+.crop-instruction {
+    font-size: 0.9rem;
+    color: #4B5563;
+    margin: 0 0 8px 0;
+    font-style: italic;
+}
+
+.crop-wrapper {
+    height: 280px;
+    /* Reduced to fit in window */
+    overflow: hidden;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f3f4f6;
+}
+
+.crop-wrapper img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    /* Permanent bottom spacing */
+    width: 100%;
+}
+
+.upload-btn {
+    flex: 2;
+}
+
+.reset-btn {
+    flex: 1;
+}
+
+.success-message {
+    background-color: #D1FAE5;
+    color: #065F46;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.error-message {
+    background-color: #FEE2E2;
+    color: #991B1B;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+footer {
+    margin-top: auto;
+    font-size: 0.75rem;
+    color: #9CA3AF;
+    border-top: 1px solid #E5E7EB;
+    padding-top: 10px;
+}
+
+/* Add to bottom of App.css */
+
+.notes-section {
+    width: 100%;
+}
+
+.notes-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    resize: none;
+    /* Prevents user from breaking the layout */
+    background-color: #F9FAFB;
+    transition: border-color 0.2s;
+    height: 60px;
+}
+
+.notes-input:focus {
+    outline: none;
+    border-color: #2563EB;
+    background-color: white;
+}
+
+.notes-input::placeholder {
+    color: #9CA3AF;
+}
