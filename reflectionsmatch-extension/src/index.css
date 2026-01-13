@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* FORCE DIMENSIONS & HIDE SCROLLBAR */
+html,
+body {
+    width: 400px;
+    height: 600px;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}

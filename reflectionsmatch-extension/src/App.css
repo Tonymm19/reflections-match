@@ -1,25 +1,11 @@
-html,
-body {
-    width: 400px;
-    /* Fixed width as requested */
-    height: 100vh;
-    /* Max Chrome extension height */
-    margin: 0;
-    padding: 0;
-    overflow: hidden !important;
-    /* Prevent scroll */
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-}
-
 #root {
-    width: 100%;
     height: 100%;
-    display: flex;
-    flex-direction: column;
+    width: 100%;
 }
 
 .App {
     padding: 16px;
+    /* Increased to 16px as requested */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -50,10 +36,9 @@ main {
     display: flex;
     flex-direction: column;
     width: 100%;
-    overflow-y: auto;
-    /* Safety net: Scroll if content gets too tall */
-    padding-bottom: 20px;
-    /* Ensure bottom breathing room */
+    overflow: hidden;
+    /* Prevent main scroll, let inner components handle it if needed */
+    padding-bottom: 0px;
 }
 
 .capture-container {
@@ -107,21 +92,26 @@ main {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    /* Changed from center to stretch */
-    gap: 12px;
+    gap: 8px;
+    /* Reduced gap */
     width: 100%;
+    flex: 1;
+    /* Grow to fill main */
+    min-height: 0;
+    /* Enable scrolling/flex shrinking */
 }
 
 .crop-instruction {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: #4B5563;
-    margin: 0 0 8px 0;
+    margin: 0 0 4px 0;
     font-style: italic;
 }
 
 .crop-wrapper {
-    height: 280px;
-    /* Reduced to fit in window */
+    flex: 1;
+    /* Grow to fill available space */
+    min-height: 0;
     overflow: hidden;
     border: 1px solid #E5E7EB;
     border-radius: 8px;
@@ -134,17 +124,21 @@ main {
 
 .crop-wrapper img {
     max-width: 100%;
+    /* Maximize width */
     max-height: 100%;
     object-fit: contain;
+    display: block;
+    /* Remove whitespace */
 }
 
 .action-buttons {
     display: flex;
     justify-content: center;
     gap: 10px;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    /* Permanent bottom spacing */
+    margin-top: auto;
+    /* Push to bottom if container grows */
+    padding-bottom: 0;
+    /* Handled by App padding */
     width: 100%;
 }
 
