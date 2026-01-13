@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Loader, Sparkles, Zap, Compass, Save, Bookmark, ExternalLink, RefreshCw, Trash2, Edit3, X } from 'lucide-react';
 
-const API_KEY = 'AIzaSyBGy5jRU5ic7kYJVJT3Hc5cLr9nLAkRrFA';
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 const Radar = ({ user }) => {

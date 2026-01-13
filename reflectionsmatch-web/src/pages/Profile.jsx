@@ -8,7 +8,7 @@ import { Plus, X, Brain, User, Edit2, Check, Loader, Upload, ExternalLink, FileT
 import LinkedInGuideModal from '../components/LinkedInGuideModal';
 import { parsePdf, parseDocx, parseTxt } from '../utils/fileParsers';
 
-const API_KEY = 'AIzaSyBGy5jRU5ic7kYJVJT3Hc5cLr9nLAkRrFA';
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 const Profile = ({ user }) => {

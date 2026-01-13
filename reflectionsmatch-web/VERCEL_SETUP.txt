@@ -1,0 +1,10 @@
+Vercel Environment Variables Setup
+
+Go to your Vercel Project Dashboard -> Settings -> Environment Variables.
+
+Add the following Key-Value pair:
+
+Key: VITE_GEMINI_API_KEY
+Value: AIzaSyBGy5jRU5ic7kYJVJT3Hc5cLr9nLAkRrFA
+
+(Note: The VITE_ prefix is required for Vite to expose this variable to your React code in production.)
