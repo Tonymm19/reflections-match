@@ -8,10 +8,12 @@ import ReflectionCard from './components/ReflectionCard';
 import Profile from './pages/Profile';
 import Chat from './pages/Chat'; // NEW IMPORT
 import Radar from './pages/Radar';
+import About from './pages/About';
 import Navbar from './components/Navbar';
 import { Search, TrendingUp } from 'lucide-react';
 import ReflectionUploader from './components/ReflectionUploader'; // NEW IMPORT
 import LandingPage from './components/LandingPage';
+import Footer from './components/Footer';
 
 // Initialize Gemini
 // TODO: Replace with real key or use env var
@@ -37,9 +39,9 @@ async function urlToGenerativePart(url) {
     };
 }
 
-const Dashboard = ({ user }) => {
-    const [reflections, setReflections] = useState([]);
-    const [loading, setLoading] = useState(true);
+const Dashboard = ({ user, reflections, loading }) => {
+    // const [reflections, setReflections] = useState([]);  <-- LIFTED
+    // const [loading, setLoading] = useState(true);        <-- LIFTED
     const [searchTerm, setSearchTerm] = useState('');
     const [analyzingIds, setAnalyzingIds] = useState(new Set());
     const [isAwakening, setIsAwakening] = useState(false);
@@ -50,44 +52,22 @@ const Dashboard = ({ user }) => {
     const [milestone, setMilestone] = useState(null); // Milestone State
     const processingIds = useRef(new Set());
 
-    // 1. Data Fetching
+    // 1. Data Fetching - MOVED TO APP
     useEffect(() => {
-        if (!user) return; // Wait for user to be authenticated
+        if (!user) return;
 
-        // Fetch User Data (Tagline + Milestones)
+        // Fetch User Data Only (Tagline + Milestones)
         const userUnsubscribe = onSnapshot(doc(db, "users", user.uid), (docSnapshot) => {
             if (docSnapshot.exists()) {
                 const data = docSnapshot.data();
                 setUserTagline(data.tagline || '');
-                // Check for Milestone
                 if (data.milestoneReached) {
                     setMilestone(data.milestoneReached);
                 }
             }
         });
 
-        const q = query(
-            collection(db, 'reflections'),
-            where("userId", "==", user.uid),
-            orderBy("timestamp", "desc")
-        );
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setReflections(data);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching reflections: ", error);
-            if (error.code === 'failed-precondition') {
-                console.log("INDEX REQUIRED: Check console/firebase for index creation link.");
-            }
-            setLoading(false);
-        });
-
         return () => {
-            unsubscribe();
             userUnsubscribe();
         };
     }, [user]);
@@ -100,7 +80,7 @@ const Dashboard = ({ user }) => {
         setAnalyzingIds(prev => new Set(prev).add(id));
 
         try {
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
             const imagePart = await urlToGenerativePart(imageUrl);
             const prompt = 'Analyze this image. Return a valid JSON object with a "summary" (max 2 sentences) and "tags" (array of 3 keywords). Do not include markdown code block syntax around the JSON.';
             const result = await model.generateContent([prompt, imagePart]);
@@ -338,6 +318,12 @@ const Dashboard = ({ user }) => {
                         </div>
                     </div>
 
+                    {/* Ad Placeholder */}
+                    <div className="hidden lg:block absolute top-0 right-1/2 translate-x-1/2 lg:translate-x-0 lg:right-auto lg:left-[500px] bg-white border border-dashed border-gray-300 rounded-lg px-4 py-1.5 opacity-60 hover:opacity-100 transition-opacity">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center">Sponsored</p>
+                        <div className="w-48 h-2"></div>
+                    </div>
+
                     {/* Search Bar - Moved here */}
                     <div className="relative w-full max-w-md pb-2">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none pb-2">
@@ -452,9 +438,13 @@ const Dashboard = ({ user }) => {
 function App() {
     const [user, setUser] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
+    // Lifted State
+    const [reflections, setReflections] = useState([]);
+    const [dataLoading, setDataLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+
+        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
             setAuthLoading(false);
         });
@@ -471,10 +461,38 @@ function App() {
         }, 3000);
 
         return () => {
-            unsubscribe();
+            unsubscribeAuth();
             clearTimeout(timeout);
         };
     }, []);
+
+    // Fetch Reflections at Top Level
+    useEffect(() => {
+        if (!user) {
+            setReflections([]);
+            return;
+        }
+
+        const q = query(
+            collection(db, 'reflections'),
+            where("userId", "==", user.uid),
+            orderBy("timestamp", "desc")
+        );
+
+        const unsubscribeData = onSnapshot(q, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setReflections(data);
+            setDataLoading(false);
+        }, (error) => {
+            console.error("Error fetching reflections:", error);
+            setDataLoading(false);
+        });
+
+        return () => unsubscribeData();
+    }, [user]);
 
     if (authLoading) {
         return (
@@ -486,16 +504,22 @@ function App() {
 
     if (!user) return <LandingPage />;
 
+    // ... (existing imports)
+
+    // ... (App component code)
+
     return (
         <BrowserRouter>
             <Navbar user={user} />
             <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" />} />
-                <Route path="/dashboard" element={<Dashboard user={user} />} />
-                <Route path="/profile" element={<Profile user={user} />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/dashboard" element={<Dashboard user={user} reflections={reflections} loading={dataLoading} />} />
+                <Route path="/profile" element={<Profile user={user} reflections={reflections} />} />
                 <Route path="/radar" element={<Radar user={user} />} />
                 <Route path="/chat" element={<Chat user={user} />} />
             </Routes>
+            <Footer />
         </BrowserRouter>
     );
 }

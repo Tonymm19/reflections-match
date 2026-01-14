@@ -15,8 +15,11 @@ const Navbar = ({ user }) => {
                 <div className="flex justify-between h-16 items-center">
                     {/* Brand */}
                     <div className="flex-shrink-0 flex items-center">
-                        <Link to="/dashboard" className="text-xl font-bold tracking-tight hover:text-indigo-200 transition-colors">
-                            Reflections Match
+                        <Link to="/dashboard" className="flex items-center gap-3 text-xl font-bold tracking-tight hover:text-indigo-200 transition-colors group">
+                            <div className="h-10 w-10 bg-white/10 rounded-full flex items-center justify-center p-1 group-hover:bg-white/20 transition-colors">
+                                <img src="/src/assets/fingerprint_logo.png" alt="Logo" className="h-full w-full object-contain" />
+                            </div>
+                            <span>Reflections Match</span>
                         </Link>
                     </div>
 
@@ -52,6 +55,16 @@ const Navbar = ({ user }) => {
                                         }`}
                                 >
                                     Chat
+                                </Link>
+
+                                <Link
+                                    to="/about"
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/about')
+                                        ? 'bg-white/10 text-white'
+                                        : 'text-indigo-200 hover:text-white hover:bg-white/5'
+                                        }`}
+                                >
+                                    About
                                 </Link>
 
                                 <Link

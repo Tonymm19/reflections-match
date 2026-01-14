@@ -35,11 +35,11 @@ const LandingPage = () => {
             <nav className="fixed top-0 w-full bg-transparent backdrop-blur-lg z-50">
                 <div className="container mx-auto px-6 py-4 flex justify-between items-center">
                     <div className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer">
-                        <div className="h-10 w-10 rounded-full overflow-hidden border border-white/20 shadow-sm relative">
+                        <div className="h-12 w-12 flex items-center justify-center">
                             <img
-                                src="/landing-fingerprint.png"
+                                src="/src/assets/fingerprint_logo.png"
                                 alt="Reflections Match"
-                                className="absolute inset-0 h-full w-full object-cover"
+                                className="h-full w-full object-contain"
                             />
                         </div>
                         <span className="font-bold text-gray-700 tracking-tight hidden md:block">Reflections Match</span>
@@ -126,17 +126,17 @@ const LandingPage = () => {
             </div>
 
             {/* PHILOSOPHY BANNER - Dark Anchor */}
-            <div id="how-it-works" className="bg-[#1a1b1e] text-white py-24 relative z-10">
-                <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-12">
+            <div id="how-it-works" className="bg-[#1a1b1e] text-white py-16 relative z-10">
+                <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
                     <h2 className="text-2xl md:text-3xl font-bold italic w-full md:w-1/3 text-gray-400">
                         What is a Reflection?
                     </h2>
-                    <div className="w-full md:w-2/3 space-y-8">
+                    <div className="w-full md:w-2/3 space-y-6">
                         <p className="text-2xl md:text-3xl font-light leading-relaxed text-gray-200">
                             "A <strong className="text-white font-semibold">Reflection</strong> is something that matches you. Combined they form a powerful tool that can help you build your <span className="text-blue-400 font-bold">Knowledge, Interests, and Career.</span>"
                         </p>
 
-                        <div id="vision" className="pt-12 border-t border-gray-800">
+                        <div id="vision" className="pt-8 border-t border-gray-800">
                             <h3 className="text-xl font-bold mb-2 text-white">"Your Network Should Be a Reflection of You."</h3>
                             <p className="text-gray-500 font-medium text-lg italic">Traditional networking matches job titles. We match minds.</p>
                         </div>
@@ -144,7 +144,7 @@ const LandingPage = () => {
                 </div>
             </div>
 
-            <footer className="py-8 text-center text-gray-500 text-xs font-semibold bg-[#1a1b1e] border-t border-gray-800">
+            <footer className="py-6 text-center text-gray-500 text-xs font-semibold bg-[#1a1b1e] border-t border-gray-800">
                 &copy; 2026 Reflections Match. Built for the modern mind.
             </footer>
         </div>

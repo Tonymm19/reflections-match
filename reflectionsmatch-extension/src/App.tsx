@@ -2,11 +2,21 @@ import { useState, useRef, useEffect } from 'react'
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { collection, addDoc, serverTimestamp, setDoc, doc, getCountFromServer, query, where, updateDoc } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, setDoc, doc, getCountFromServer, query, where, updateDoc, getDoc } from 'firebase/firestore'
 import { storage, db, auth } from './firebaseConfig'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, type User, createUserWithEmailAndPassword } from 'firebase/auth'
 import { canvasPreview } from './canvasPreview'
+import { GoogleGenerativeAI } from "@google/generative-ai"
+import ReactMarkdown from 'react-markdown'
 import './App.css'
+
+// Initialize Gemini
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+console.log("Checking VITE_GEMINI_API_KEY status...", API_KEY ? "Present" : "Missing");
+if (!API_KEY) {
+  console.error("CRITICAL: API Key is missing from the build.");
+}
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 function App() {
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
@@ -20,6 +30,13 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+
+  // View State: 'capture', 'success', 'insight'
+  const [viewMode, setViewMode] = useState<'capture' | 'success' | 'insight'>('capture');
+
+  // Insight State
+  const [insight, setInsight] = useState<string>('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -39,7 +56,6 @@ function App() {
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
-      // Success will trigger onAuthStateChanged
     } catch (err: any) {
       setError("Authentication failed: " + err.message);
     } finally {
@@ -66,9 +82,8 @@ function App() {
 
   // Upload state
   const [uploading, setUploading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [isBursting, setIsBursting] = useState(false); // NEW
-  const [buttonText, setButtonText] = useState("Save Reflection"); // NEW
+  const [isBursting, setIsBursting] = useState(false);
+  const [buttonText, setButtonText] = useState("Save Reflection");
 
   // Check URL on mount
   useEffect(() => {
@@ -76,16 +91,10 @@ function App() {
       const tab = tabs[0];
       if (tab?.url) {
         setSourceUrl(tab.url);
-
-        // Check for navigation flag from background script
         if (tab.id) {
           chrome.storage.local.get(['linkedInSync_' + tab.id], (result) => {
             if (result['linkedInSync_' + tab.id]) {
-              // If the flag was set (even if redirected), treat as valid sync target
-              // We can artificially append the param to sourceUrl state to trigger the UI,
-              // or just modify the condition. Let's modify the condition by setting a new state.
               setSourceUrl(prev => prev + "?reflections_sync=true");
-              // Clean up flag
               chrome.storage.local.remove(['linkedInSync_' + tab.id]);
             }
           });
@@ -104,18 +113,12 @@ function App() {
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: async () => {
-          // Helper to wait
           const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
-
-          // 1. Force Scroll to bottom to trigger lazy loading
           window.scrollTo(0, document.body.scrollHeight);
-          await wait(2000); // Wait for content to load
-          window.scrollTo(0, 0); // Scroll back up (optional, but polite)
+          await wait(2000);
+          window.scrollTo(0, 0);
 
-          // 2. Deep Text Extraction
           const bodyText = document.body.innerText;
-
-          // Heuristic Parsing
           const findSection = (keyword: string, length = 1500) => {
             const regex = new RegExp(`${keyword}\\s*\\n`, 'i');
             const match = bodyText.match(regex);
@@ -127,8 +130,6 @@ function App() {
 
           const aboutText = findSection("About", 2000);
           const experienceText = findSection("Experience", 4000);
-
-          // Fallback / Basic Info
           const getName = () => (document.querySelector('h1') as HTMLElement)?.innerText || "";
           const getHeadline = () => (document.querySelector('.text-body-medium') as HTMLElement)?.innerText || "";
           const getMetaAbout = () => document.querySelector('meta[property="og:description"]')?.getAttribute("content") || "";
@@ -151,17 +152,12 @@ function App() {
 
         if (results && results[0] && results[0].result) {
           const data = results[0].result;
-          // Save to Firestore
-          console.log("Saving LinkedIn Data:", data);
-          // 2. Save Data to USER DOCUMENT (Sync Profile)
           try {
             await setDoc(doc(db, "users", user!.uid), {
               linkedinProfileData: data,
-              tagline: data.headline // Optional: auto-update tagline
+              tagline: data.headline
             }, { merge: true });
-
-            setUploadSuccess(true);
-            setTimeout(() => window.close(), 2000);
+            setViewMode('success');
           } catch (e: any) {
             setError("Save failed: " + e.message);
           }
@@ -177,7 +173,6 @@ function App() {
   const captureTab = async () => {
     setLoading(true);
     setError(null);
-    setUploadSuccess(false);
     try {
       chrome.tabs.captureVisibleTab({ format: 'png' }, (dataUrl: string) => {
         if (chrome.runtime.lastError) {
@@ -200,9 +195,13 @@ function App() {
     setSourceUrl(null);
     setCrop(undefined);
     setCompletedCrop(undefined);
-    setUserNotes(''); // Clear notes on reset
+    setUserNotes('');
     setError(null);
-    setUploadSuccess(false);
+    setViewMode('capture');
+    setInsight('');
+    setIsAnalyzing(false);
+    setIsBursting(false);
+    setButtonText("Save Reflection");
   };
 
   const handleUpload = async () => {
@@ -219,14 +218,11 @@ function App() {
         blob = await response.blob();
       }
 
-      // 1. Upload Image
       const filename = `captures/${Date.now()}.png`;
       const storageRef = ref(storage, filename);
       const snapshot = await uploadBytes(storageRef, blob);
       const downloadUrl = await getDownloadURL(snapshot.ref);
 
-      // 2. Milestone Logic (Check Count BEFORE or parallel)
-      // We need to count existing reflections for this user
       let milestoneReached = null;
       let currentReflectionCount = 0;
 
@@ -234,80 +230,98 @@ function App() {
         const q = query(collection(db, "reflections"), where("userId", "==", user?.uid));
         const snapshot = await getCountFromServer(q);
         const currentCount = snapshot.data().count;
-        const newCount = currentCount + 1; // Anticipating this add
+        const newCount = currentCount + 1;
         currentReflectionCount = newCount;
-
-        if (newCount === 10 || newCount === 25) {
+        if (newCount === 10 || newCount === 25 || newCount === 50 || newCount === 100) {
           milestoneReached = newCount;
         }
       } catch (err) {
         console.error("Error checking milestone:", err);
       }
 
-      // 3. Save Data (Including user notes)
-      console.log("Uploading Reflection for UserID:", user?.uid);
       await addDoc(collection(db, "reflections"), {
         imageUrl: downloadUrl,
         timestamp: serverTimestamp(),
         notes: userNotes,
         sourceUrl: sourceUrl,
-        userId: user?.uid // Use real User ID
+        userId: user?.uid
       });
 
-      // 4. Update User Doc if Milestone Reached
       if (milestoneReached && user?.uid) {
-        await updateDoc(doc(db, "users", user.uid), {
-          milestoneReached: milestoneReached // Simple flag or value
-        });
+        await updateDoc(doc(db, "users", user.uid), { milestoneReached });
       }
 
-      // 5. Success Feedback
-      setUploadSuccess(true);
-      if (currentReflectionCount === 1) {
-        setButtonText("1st Reflection Captured! ✨");
-      } else {
-        setButtonText("Captured! ✨");
-      }
+      setButtonText(currentReflectionCount === 1 ? "1st Reflection Captured! ✨" : "Captured! ✨");
       setIsBursting(true);
 
       setTimeout(() => {
-        clearScreenshot();
-        window.close();
-      }, 2000);
+        setViewMode('success');
+      }, 1000);
 
     } catch (err: any) {
       console.error("Upload failed:", err);
       setError('Upload failed: ' + err.message);
     } finally {
       setUploading(false);
-      // Reset generic state if needed, but window closing soon
+    }
+  };
+
+  const generateInsight = async () => {
+    if (!user) return;
+
+    setViewMode('insight');
+    setIsAnalyzing(true);
+    setInsight('');
+
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      let traitsText = "Unknown Traits";
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        if (data.aiPersona && data.aiPersona.traits) {
+          traitsText = data.aiPersona.traits.join(", ");
+        } else if (data.explicitInterests) {
+          traitsText = data.explicitInterests.join(", ");
+        }
+      }
+
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+      const systemPrompt = `You are Tony's Digital Twin. Use his Core Traits (AI Solutions Architect, Guitar Player) to provide a single-turn Digital Twin Brief in Markdown. Structure: 1) One high-level sentence on the signal's impact. 2) Three bulleted 'Next Steps' for his career/interests.
+      User Traits: ${traitsText}.
+      New Reflection Notes: "${userNotes}"`;
+
+      const result = await model.generateContent(systemPrompt);
+      const response = result.response.text();
+      setInsight(response);
+
+    } catch (err: any) {
+      console.error("Insight generation error:", err);
+      setInsight("Unable to generate insight. Please check your connection.");
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
   return (
-    <div className="App">
-      <header className="app-header">
-        <h1>Reflections Match</h1>
-        {user ? (
+    <div className="App min-h-screen flex flex-col" style={{ width: '100%', height: '100%' }}>
+      <header className="app-header p-4 border-b border-gray-200 bg-white">
+        <h1 className="text-blue-600 font-bold text-lg m-0">ReflectionsMatch</h1>
+        {viewMode !== 'capture' && user && (
           <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>
             {user.email} <button onClick={handleSignOut} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', textDecoration: 'underline', marginLeft: '5px' }}>Sign Out</button>
           </div>
-        ) : (
-          <p className="subtitle">Capture and reflect</p>
         )}
       </header>
 
-      <main>
+      <main className="flex-1 flex flex-col w-full overflow-hidden relative bg-white">
         {authLoading ? (
           <div style={{ padding: '20px' }}>Loading...</div>
         ) : !user ? (
           <div className="login-container" style={{ padding: '0 20px', width: '100%', boxSizing: 'border-box' }}>
-            {/* ... Login Form ... */}
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
               <h2 style={{ fontSize: '1.2rem', color: '#333', marginBottom: '10px' }}>
                 {isSignUp ? 'Create Account' : 'Sign In'}
               </h2>
-              {/* ... existing fields ... */}
               {error && <div className="error-message">{error}</div>}
               <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="notes-input" style={{ height: '40px' }} required />
               <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="notes-input" style={{ height: '40px' }} required />
@@ -319,31 +333,86 @@ function App() {
               </div>
             </form>
           </div>
+        ) : viewMode === 'success' ? (
+          <div className="flex flex-col items-center justify-center min-h-[400px] h-full gap-8 p-6 w-full">
+            <div className="flex flex-col items-center text-center">
+              <div style={{ fontSize: '4rem', marginBottom: '16px' }}>✨</div>
+              <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: '#166534', fontWeight: 'bold' }}>Reflection Captured!</h2>
+              <p style={{ color: '#666', fontSize: '0.9rem' }}>Insights are emerging in your Reflections...</p>
+            </div>
+
+            <div className="w-full flex flex-col items-center gap-4">
+              <button
+                className="primary-button w-full max-w-[240px] flex items-center justify-center gap-2"
+                onClick={generateInsight}
+                style={{ padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 600, backgroundColor: '#2563eb', color: 'white' }}
+              >
+                <span>✨</span> Ask Your Reflections
+              </button>
+
+              <button
+                className="primary-button w-full max-w-[240px]"
+                onClick={clearScreenshot}
+                style={{ backgroundColor: '#4b5563', padding: '12px', borderRadius: '8px', border: 'none', color: 'white' }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        ) : viewMode === 'insight' ? (
+          // Use a fade-in animation container
+          <div className="flex flex-col h-full bg-gray-50 animate-in fade-in duration-700">
+            <div className="flex-1 overflow-y-auto p-4">
+              {isAnalyzing ? (
+                <div className="flex flex-col items-center justify-center h-full gap-4">
+                  <p className="text-gray-600 font-medium animate-pulse">Analyzing Patterns...</p>
+                  <div className="flex gap-2">
+                    <div className="w-2 h-8 bg-slate-700 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-8 bg-slate-700 rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-8 bg-slate-700 rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full">
+                  <div className="bg-[#1e1f22] p-6 rounded-xl border-l-4 border-purple-500 shadow-2xl text-white">
+                    <div className="prose prose-invert max-w-none">
+                      <ReactMarkdown>
+                        {insight}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-gray-200 bg-white">
+              <button
+                onClick={clearScreenshot}
+                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors"
+              >
+                Back to Reflections
+              </button>
+            </div>
+          </div>
         ) : sourceUrl?.includes("linkedin.com/in/") ? (
-          // LINKEDIN SYNC VIEW
+          // ... LinkedIn Sync View (Same as before)
           <div className="capture-container" style={{ padding: '20px', textAlign: 'center' }}>
             <div style={{ marginBottom: '20px', background: '#e8f4f9', padding: '16px', borderRadius: '12px', border: '1px solid #cce4f0' }}>
               <h3 style={{ margin: '0 0 8px 0', color: '#0077B5', fontSize: '1.1rem' }}>LinkedIn Detected</h3>
               <p style={{ margin: 0, fontSize: '0.9rem', color: '#555' }}>We can import your Headline and Bio directly to your profile.</p>
             </div>
 
-            {uploadSuccess ? (
-              <div className="success-message" style={{ width: '100%', marginBottom: '16px' }}>
-                Profile Synced Successfully!
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <p style={{ fontSize: '0.8rem', color: '#666' }}>We are auto-syncing your profile in the background. If it didn't work, click below.</p>
-                <button
-                  className="primary-button"
-                  style={{ background: '#0077B5' }}
-                  onClick={handleLinkedInSync}
-                  disabled={loading}
-                >
-                  {loading ? 'Syncing...' : 'Force Sync Profile'}
-                </button>
-              </div>
-            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <p style={{ fontSize: '0.8rem', color: '#666' }}>We are auto-syncing your profile in the background. If it didn't work, click below.</p>
+              <button
+                className="primary-button"
+                style={{ background: '#0077B5' }}
+                onClick={handleLinkedInSync}
+                disabled={loading}
+              >
+                {loading ? 'Syncing...' : 'Force Sync Profile'}
+              </button>
+            </div>
 
             {error && <div className="error-message" style={{ marginTop: '16px' }}>{error}</div>}
 
@@ -360,26 +429,21 @@ function App() {
           </div>
         ) : (
           <div className="preview-container">
-            {/* ... Existing Preview UI ... */}
             <p className="crop-instruction">Crop the image, then tell us why it matters.</p>
             <div className="crop-wrapper">
               <ReactCrop crop={crop} onChange={(c) => setCrop(c)} onComplete={(c) => setCompletedCrop(c)}>
                 <img ref={imgRef} src={screenshotUrl || undefined} alt="Screenshot" style={{ maxWidth: '100%' }} />
               </ReactCrop>
             </div>
-            {uploadSuccess ? (
-              <div className="success-message" style={{ width: '100%', marginBottom: '16px' }}>Saved successfully!</div>
-            ) : (
-              <div className="notes-section">
-                <textarea className="notes-input" placeholder="Why is this relevant? (Optional)" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} />
-                {error && <div className="error-message" style={{ width: '100%', marginTop: '8px' }}>{error}</div>}
-              </div>
-            )}
+
+            <div className="notes-section">
+              <textarea className="notes-input" placeholder="Why is this relevant? (Optional)" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} />
+              {error && <div className="error-message" style={{ width: '100%', marginTop: '8px' }}>{error}</div>}
+            </div>
+
             <div className="action-buttons">
               <button className="primary-button upload-btn" onClick={handleUpload} disabled={uploading} style={{ position: 'relative', overflow: 'visible' }}>
                 {uploading ? 'Saving...' : buttonText}
-
-                {/* Particle Burst */}
                 {isBursting && (
                   <>
                     {[...Array(12)].map((_, i) => {
@@ -414,7 +478,7 @@ function App() {
           </div>
         )}
       </main>
-      <footer>v1.1.0</footer>
+      <footer style={viewMode === 'insight' || viewMode === 'success' ? { backgroundColor: '#f3f4f6', color: '#9ca3af', borderTop: 'none' } : {}}>v1.3.0</footer>
     </div>
   )
 }

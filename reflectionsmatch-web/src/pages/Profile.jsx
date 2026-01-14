@@ -1,17 +1,20 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
+import { httpsCallable } from "firebase/functions"; // Import callable
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { db, storage, functions } from '../firebase'; // Import functions
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Plus, X, Brain, User, Edit2, Check, Loader, Upload, ExternalLink, FileText, Linkedin } from 'lucide-react';
+import { Plus, X, Brain, User, Edit2, Check, Loader, Upload, ExternalLink, FileText, Linkedin, TrendingUp } from 'lucide-react';
+import { motion } from 'framer-motion';
 import LinkedInGuideModal from '../components/LinkedInGuideModal';
 import { parsePdf, parseDocx, parseTxt } from '../utils/fileParsers';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-const Profile = ({ user }) => {
+const Profile = ({ user, reflections = [] }) => {
     // Identity State
     const [displayName, setDisplayName] = useState(user?.displayName || '');
     const [photoURL, setPhotoURL] = useState(user?.photoURL || '');
@@ -24,6 +27,8 @@ const Profile = ({ user }) => {
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false); // NEW
     const [linkedInData, setLinkedInData] = useState(null); // NEW
+    const [linkInput, setLinkInput] = useState('');
+    const [preferences, setPreferences] = useState({ weeklyRadar: false }); // NEW: Preferences
     const [resumeText, setResumeText] = useState(null); // NEW: Resume Text
     const [uploadingResume, setUploadingResume] = useState(false); // NEW: Resume Upload State
     const fileInputRef = useRef(null); // Ref for file input
@@ -42,7 +47,7 @@ const Profile = ({ user }) => {
     const [analyzing, setAnalyzing] = useState(false);
     const [lastAnalyzed, setLastAnalyzed] = useState(null);
     const [lastAnalysisCount, setLastAnalysisCount] = useState(0); // NEW: Track count
-    const [currentReflectionCount, setCurrentReflectionCount] = useState(0); // NEW: Live count for levels
+    const currentReflectionCount = reflections.length; // DERIVED FROM PROPS
     const [toastMessage, setToastMessage] = useState(null); // NEW: Toast state
 
     // Helper for Toast
@@ -71,12 +76,12 @@ const Profile = ({ user }) => {
                     setTagline(data.tagline || ''); // Fetch tagline
                     if (data.linkedinProfileData) setLinkedInData(data.linkedinProfileData); // NEW
                     if (data.resumeText) setResumeText(data.resumeText); // Fetch resume text
+                    if (data.preferences) setPreferences(data.preferences); // Fetch preferences
                     if (data.lastAnalysisCount) setLastAnalysisCount(data.lastAnalysisCount); // Fetch count
 
-                    // Fetch live reflection count for level logic
-                    const q = query(collection(db, 'reflections'), where("userId", "==", user.uid));
-                    const snapshot = await getDocs(q);
-                    setCurrentReflectionCount(snapshot.size);
+
+
+                    // Fetch live reflection count for level logic - REMOVED (Using Prop)
 
                     // Parse stored JSON string if it exists
                     if (data.aiPersona) {
@@ -167,27 +172,7 @@ const Profile = ({ user }) => {
     }, [linkedInData]);
 
     // 2. Reflection Threshold Check on Load
-    useEffect(() => {
-        const checkThreshold = async () => {
-            if (!user || loading || analyzing) return;
-            if (lastAnalysisCount === undefined) return;
 
-            const q = query(
-                collection(db, 'reflections'),
-                where("userId", "==", user.uid)
-            );
-            const snapshot = await getDocs(q);
-            const currentCount = snapshot.size;
-
-            if (currentCount - lastAnalysisCount >= 5) {
-                showToast(`You have ${currentCount - lastAnalysisCount} new reflections! Updating analysis...`);
-                analyzePersona();
-            }
-        };
-
-        checkThreshold();
-    }, [user, loading, lastAnalysisCount]);
-    // --- END AUTO-UPDATE LOGIC ---
 
     // Handlers
     const handlePhotoUpload = async (e) => {
@@ -195,7 +180,7 @@ const Profile = ({ user }) => {
         if (!file) return;
         setUploadingPhoto(true);
         try {
-            const storageRef = ref(storage, `profile_pics/${user.uid}`);
+            const storageRef = ref(storage, `profile_pics / ${user.uid} `);
             await uploadBytes(storageRef, file);
             const url = await getDownloadURL(storageRef);
             await updateProfile(user, { photoURL: url });
@@ -233,20 +218,20 @@ const Profile = ({ user }) => {
             let accumulatedText = "USER REFLECTIONS:\n";
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                if (data.aiSummary) accumulatedText += `Summary: ${data.aiSummary}\n`;
-                if (data.tags) accumulatedText += `Tags: ${data.tags.join(', ')}\n`;
+                if (data.aiSummary) accumulatedText += `Summary: ${data.aiSummary} \n`;
+                if (data.tags) accumulatedText += `Tags: ${data.tags.join(', ')} \n`;
                 accumulatedText += "---\n";
             });
 
             // Add Professional Context
             let professionalContext = "\nPROFESSIONAL CONTEXT:\n";
             if (resumeText) {
-                professionalContext += `RESUME CONTENT:\n${resumeText.substring(0, 5000)}\n\n`; // Limit length
+                professionalContext += `RESUME CONTENT: \n${resumeText.substring(0, 5000)} \n\n`; // Limit length
             }
             if (linkedInData?.deepProfileText) {
-                professionalContext += `LINKEDIN DATA:\n${linkedInData.deepProfileText}\n\n`;
+                professionalContext += `LINKEDIN DATA: \n${linkedInData.deepProfileText} \n\n`;
             } else if (linkedInData) {
-                professionalContext += `LINKEDIN SUMMARY:\n${linkedInData.headline}\n${linkedInData.about}\n`;
+                professionalContext += `LINKEDIN SUMMARY: \n${linkedInData.headline} \n${linkedInData.about} \n`;
             }
 
             // 3. Call Gemini
@@ -257,22 +242,22 @@ const Profile = ({ user }) => {
             SYSTEM CONTEXT:
             You are analyzing the user '${user.displayName || "User"}'.
             
-            SOURCE A: PROFESSIONAL DATA (LinkedIn/Resume)
+            SOURCE A: PROFESSIONAL DATA(LinkedIn / Resume)
             ${linkedInData?.deepProfileText || linkedInData?.about || "No LinkedIn data found."}
             ${resumeText || "No Resume data found."}
 
-            SOURCE B: PERSONAL REFLECTIONS (Notes)
+            SOURCE B: PERSONAL REFLECTIONS(Notes)
             ${accumulatedText}
 
-            TASK:
+TASK:
             Create a 'Reflection Analysis' that blends their professional expertise with their personal curiosities.
-            Return a valid JSON object with: 
-            1. "traits" (Extract 5-7 distinct 'Archetypes' or 'Skills' as short 2-3 word tags e.g., 'AR/VR Strategist', 'Music Historian', 'Health Bio-hacker'. Do NOT write full sentences.), 
-            2. "summary" (Write a rich, nuanced professional biography (approx. 150-200 words). Weave the user's professional expertise with their personal passions to create a holistic picture of who they are. Avoid generic corporate speak; make it sound like a premium bio. Address the user as 'You'.). 
-            Do NOT refer to 'the user' in the third person. Do NOT wrap in markdown code blocks.
+            Return a valid JSON object with:
+1. "traits"(Extract 5 - 7 distinct 'Archetypes' or 'Skills' as short 2 - 3 word tags e.g., 'AR/VR Strategist', 'Music Historian', 'Health Bio-hacker'.Do NOT write full sentences.),
+    2. "summary"(Write a rich, nuanced professional biography(approx. 150 - 200 words).Weave the user's professional expertise with their personal passions to create a holistic picture of who they are. Avoid generic corporate speak; make it sound like a premium bio. Address the user as 'You'.). 
+            Do NOT refer to 'the user' in the third person.Do NOT wrap in markdown code blocks.
             
             Data to Analyze:
-            ${accumulatedText}
+        ${accumulatedText}
             ${professionalContext}`;
 
             const result = await model.generateContent(prompt);
@@ -398,6 +383,33 @@ const Profile = ({ user }) => {
 
     if (loading) return <div className="p-8 text-center text-gray-500">Loading profile...</div>;
 
+    const handleTestRadar = async () => {
+        if (!user) return;
+        const triggerRadar = httpsCallable(functions, 'triggerRadarManual');
+        showToast("Triggering Radar... check your email in a moment.");
+        try {
+            const result = await triggerRadar();
+            console.log("Radar Result:", result.data);
+            showToast("Radar Generated! Email sent.");
+        } catch (error) {
+            console.error("Radar Error:", error);
+            showToast("Error triggering Radar. Check console.");
+        }
+    };
+
+    const toggleRadarPreference = async () => {
+        if (!user) return;
+        const newWeeklyRadar = !preferences.weeklyRadar;
+        setPreferences(prev => ({ ...prev, weeklyRadar: newWeeklyRadar }));
+        try {
+            await updateDoc(doc(db, 'users', user.uid), {
+                "preferences.weeklyRadar": newWeeklyRadar
+            });
+        } catch (error) {
+            console.error("Error updating preference:", error);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 p-6 md:p-12 relative">
             {/* Toast Notification */}
@@ -418,12 +430,12 @@ const Profile = ({ user }) => {
                 <div className="bg-white rounded-2xl shadow-sm p-8 flex flex-col md:flex-row items-center gap-8 border border-gray-100">
                     {/* Photo Upload Interaction */}
                     <div
-                        className="h-24 w-24 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 font-bold text-2xl border-4 border-white shadow-md overflow-hidden relative group cursor-pointer"
+                        className="h-24 w-24 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold text-2xl border-4 border-white shadow-md overflow-hidden relative group cursor-pointer"
                         onClick={() => fileInputRef.current?.click()}
                         title="Change Profile Photo"
                     >
                         {user?.photoURL ? (
-                            <img src={user.photoURL} alt="Profile" className="h-full w-full object-cover" />
+                            <img src={user.photoURL} alt="Profile" className="h-full w-full object-contain" />
                         ) : (
                             <span>{user?.displayName ? user.displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "TM"}</span>
                         )}
@@ -503,33 +515,27 @@ const Profile = ({ user }) => {
                                 {/* Stats & Level Logic */}
                                 {(() => {
                                     // Level Calculation Logic
+                                    // Tiers:
+                                    // 0-24: SHADOW
+                                    // 25-49: CLARITY
+                                    // 50-99: RADIANCE
+                                    // 100+: ESSENCE
+
                                     let levelName = "";
                                     let nextLevelName = "";
                                     let levelColor = "";
                                     let progress = 0;
                                     let target = 10;
 
-                                    // Tiers:
-                                    // 0-10: GENESIS (Next: Catalyst)
-                                    // 10-25: CATALYST (Next: Clarity)
-                                    // 25-50: CLARITY (Next: Radiance)
-                                    // 50-100: RADIANCE (Next: Essence)
-                                    // 100+: ESSENCE
-
-                                    if (currentReflectionCount < 10) {
-                                        levelName = "GENESIS";
-                                        nextLevelName = "Catalyst";
-                                        levelColor = "bg-gray-100 text-gray-600 border border-gray-200";
-                                        target = 10;
-                                    } else if (currentReflectionCount < 25) {
-                                        levelName = "CATALYST";
+                                    if (currentReflectionCount < 25) {
+                                        levelName = "SHADOW";
                                         nextLevelName = "Clarity";
-                                        levelColor = "bg-blue-50 text-blue-600 border border-blue-200";
+                                        levelColor = "bg-gray-700 text-gray-200 border border-gray-600";
                                         target = 25;
                                     } else if (currentReflectionCount < 50) {
                                         levelName = "CLARITY";
                                         nextLevelName = "Radiance";
-                                        levelColor = "bg-purple-50 text-purple-600 border border-purple-200";
+                                        levelColor = "bg-blue-50 text-blue-600 border border-blue-200";
                                         target = 50;
                                     } else if (currentReflectionCount < 100) {
                                         levelName = "RADIANCE";
@@ -557,15 +563,19 @@ const Profile = ({ user }) => {
                                                 </span>
                                             </div>
                                             <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full transition-all duration-1000 ease-out rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 ${currentReflectionCount >= 100 ? 'animate-pulse' : ''}`}
-                                                    style={{ width: `${progress}%` }}
-                                                ></div>
+                                                <motion.div
+                                                    className={`h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 ${currentReflectionCount >= 100 ? 'animate-pulse' : ''}`}
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${progress}%` }}
+                                                    transition={{ duration: 1.5, ease: [0.34, 1.56, 0.64, 1] }}
+                                                />
                                             </div>
                                             <p className="text-[10px] text-gray-400 mt-1 text-right">
-                                                {currentReflectionCount < 100
-                                                    ? `${currentReflectionCount} reflections captured—${target - currentReflectionCount} more to reach ${nextLevelName}.`
-                                                    : "Essence Synchronized."
+                                                {currentReflectionCount === 0
+                                                    ? "0/50 - Start your journey"
+                                                    : currentReflectionCount < 100
+                                                        ? `${currentReflectionCount} reflections captured—${target - currentReflectionCount} more to reach ${nextLevelName}.`
+                                                        : "Essence Synchronized."
                                                 }
                                             </p>
                                         </div>
@@ -597,67 +607,96 @@ const Profile = ({ user }) => {
                             Data Sources & Inputs
                         </h2>
 
-                        {/* Connection Status Section */}
-                        <div className="space-y-3 mb-8">
-                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Connected Accounts</h3>
+                        {/* Connection Status Section - Reordered */}
+                        <div className="space-y-6 mb-8">
 
-                            {/* LinkedIn Row */}
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-[#0077B5] text-white p-2 rounded-lg">
-                                        <Linkedin size={18} />
-                                    </div>
+                            {/* 1. Proactive Engine: Weekly Radar (Now Top) */}
+                            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm font-bold text-gray-900">LinkedIn</p>
-                                        <p className="text-xs text-gray-500">{linkedInData ? "Profile Synced" : "Not connected"}</p>
+                                        <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                            <TrendingUp className="w-4 h-4 text-purple-600" />
+                                            Weekly Radar
+                                        </h3>
+                                        <p className="text-xs text-gray-500 mt-1">Receive a weekly AI briefing.</p>
                                     </div>
-                                </div>
-                                {linkedInData ? (
-                                    <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
-                                        <Check size={12} /> Synced
-                                    </div>
-                                ) : (
                                     <button
-                                        onClick={() => setIsLinkedInModalOpen(true)}
-                                        className="text-[#0077B5] text-xs font-bold hover:underline"
+                                        onClick={toggleRadarPreference}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${preferences.weeklyRadar ? 'bg-purple-600' : 'bg-gray-200'}`}
                                     >
-                                        Connect
+                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${preferences.weeklyRadar ? 'translate-x-6' : 'translate-x-1'}`} />
                                     </button>
-                                )}
+                                </div>
+                                <button
+                                    onClick={handleTestRadar}
+                                    className="mt-4 w-full text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 rounded-lg py-2 hover:bg-purple-50 transition-colors"
+                                >
+                                    Test Radar Now (Dev)
+                                </button>
                             </div>
 
-                            {/* Resume Row */}
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-purple-600 text-white p-2 rounded-lg">
-                                        <FileText size={18} />
+                            {/* 2. Connected Data Sources */}
+                            <div className="space-y-3">
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Connected Accounts</h3>
+
+                                {/* LinkedIn Row */}
+                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-[#0077B5] text-white p-2 rounded-lg">
+                                            <Linkedin size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-900">LinkedIn</p>
+                                            <p className="text-xs text-gray-500">{linkedInData ? "Profile Synced" : "Not connected"}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-900">Resume / Bio</p>
-                                        <p className="text-xs text-gray-500">{resumeText ? "Parsed & Active" : "Not uploaded"}</p>
-                                    </div>
+                                    {linkedInData ? (
+                                        <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                            <Check size={12} /> Synced
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setIsLinkedInModalOpen(true)}
+                                            className="text-[#0077B5] text-xs font-bold hover:underline"
+                                        >
+                                            Connect
+                                        </button>
+                                    )}
                                 </div>
-                                {resumeText ? (
-                                    <div className="flex items-center gap-2">
-                                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
-                                            <Check size={12} /> Parsed
-                                        </span>
+
+                                {/* Resume Row */}
+                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-purple-600 text-white p-2 rounded-lg">
+                                            <FileText size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-900">Resume / Bio</p>
+                                            <p className="text-xs text-gray-500">{resumeText ? "Parsed & Active" : "Not uploaded"}</p>
+                                        </div>
+                                    </div>
+                                    {resumeText ? (
+                                        <div className="flex items-center gap-2">
+                                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                                <Check size={12} /> Parsed
+                                            </span>
+                                            <button
+                                                onClick={() => resumeInputRef.current?.click()}
+                                                className="text-gray-400 hover:text-purple-600"
+                                                title="Re-upload"
+                                            >
+                                                <Upload size={14} />
+                                            </button>
+                                        </div>
+                                    ) : (
                                         <button
                                             onClick={() => resumeInputRef.current?.click()}
-                                            className="text-gray-400 hover:text-purple-600"
-                                            title="Re-upload"
+                                            className="text-purple-600 text-xs font-bold hover:underline"
                                         >
-                                            <Upload size={14} />
+                                            Upload
                                         </button>
-                                    </div>
-                                ) : (
-                                    <button
-                                        onClick={() => resumeInputRef.current?.click()}
-                                        className="text-purple-600 text-xs font-bold hover:underline"
-                                    >
-                                        Upload
-                                    </button>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </div>
 

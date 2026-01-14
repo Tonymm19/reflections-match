@@ -1,0 +1,25 @@
+{
+    "name": "functions",
+    "description": "Cloud Functions for ReflectionsMatch",
+    "scripts": {
+        "serve": "firebase emulators:start --only functions",
+        "shell": "firebase functions:shell",
+        "start": "npm run shell",
+        "deploy": "firebase deploy --only functions",
+        "logs": "firebase functions:log"
+    },
+    "engines": {
+        "node": "20"
+    },
+    "main": "index.js",
+    "dependencies": {
+        "firebase-admin": "^11.5.0",
+        "firebase-functions": "^4.3.1",
+        "@google/generative-ai": "^0.24.1",
+        "googleapis": "^126.0.1",
+        "resend": "^2.0.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.3.1"
+    },
+    "private": true
+}
