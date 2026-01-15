@@ -14,6 +14,7 @@ import { Search, TrendingUp } from 'lucide-react';
 import ReflectionUploader from './components/ReflectionUploader'; // NEW IMPORT
 import LandingPage from './components/LandingPage';
 import Footer from './components/Footer';
+import ignitiaLogo from './assets/ignitia_logo.jpg';
 
 // Initialize Gemini
 // TODO: Replace with real key or use env var
@@ -293,8 +294,8 @@ const Dashboard = ({ user, reflections, loading }) => {
             )}
 
             <div className={`max-w-6xl mx-auto ${isAwakening ? 'animate-shimmer-bloom' : ''}`}>
-                <header className="mb-8 flex flex-col md:flex-row justify-between items-end gap-6">
-                    <div className="flex items-center gap-6 relative">
+                <header className="flex flex-col md:flex-row justify-between items-center gap-4 py-4">
+                    <div className="flex items-center gap-6 relative md:flex-1">
                         {/* Sparkle Overlay for Essence Level */}
                         {reflections.length >= 100 && (
                             <div className="absolute inset-0 z-20 pointer-events-none">
@@ -318,24 +319,41 @@ const Dashboard = ({ user, reflections, loading }) => {
                         </div>
                     </div>
 
-                    {/* Ad Placeholder */}
-                    <div className="hidden lg:block absolute top-0 right-1/2 translate-x-1/2 lg:translate-x-0 lg:right-auto lg:left-[500px] bg-white border border-dashed border-gray-300 rounded-lg px-4 py-1.5 opacity-60 hover:opacity-100 transition-opacity">
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center">Sponsored</p>
-                        <div className="w-48 h-2"></div>
-                    </div>
+                    {/* Ignitia-AI Ad Unit */}
+                    <a
+                        href="https://www.ignitia-ai.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex flex-col items-center group no-underline mx-auto"
+                    >
+                        <span className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 group-hover:text-slate-600 transition-colors">
+                            Sponsored by
+                        </span>
+                        <img
+                            src={ignitiaLogo}
+                            alt="Ignitia-AI"
+                            className="h-14 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity"
+                        />
+                    </a>
 
                     {/* Search Bar - Moved here */}
-                    <div className="relative w-full max-w-md pb-2">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none pb-2">
-                            <Search className="h-5 w-5 text-gray-400" />
+                    <div className="relative w-full max-w-md pb-2 md:flex-1 md:flex md:justify-end">
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none pb-2 md:relative md:inset-auto md:pr-0 md:pl-3 md:left-0">
+                            {/* Adjustment for search icon pos relative to input might be needed but generic wrapper flex-end is key */}
+                            {/* Revert inner icon simple structure */}
                         </div>
-                        <input
-                            type="text"
-                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-brand focus:ring-1 focus:ring-brand sm:text-sm"
-                            placeholder="Search notes, tags, or dates..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                        <div className="relative w-full">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none pb-2">
+                                <Search className="h-5 w-5 text-gray-400" />
+                            </div>
+                            <input
+                                type="text"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-brand focus:ring-1 focus:ring-brand sm:text-sm"
+                                placeholder="Search notes, tags, or dates..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
                     </div>
                 </header>
 

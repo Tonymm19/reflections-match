@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { LogOut, User as UserIcon } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
+import logoImg from '../assets/fingerprint_logo.png';
 
 const Navbar = ({ user }) => {
     const location = useLocation();
@@ -17,7 +18,7 @@ const Navbar = ({ user }) => {
                     <div className="flex-shrink-0 flex items-center">
                         <Link to="/dashboard" className="flex items-center gap-3 text-xl font-bold tracking-tight hover:text-indigo-200 transition-colors group">
                             <div className="h-10 w-10 bg-white/10 rounded-full flex items-center justify-center p-1 group-hover:bg-white/20 transition-colors">
-                                <img src="/src/assets/fingerprint_logo.png" alt="Logo" className="h-full w-full object-contain" />
+                                <img src={logoImg} alt="Logo" className="h-full w-full object-contain" />
                             </div>
                             <span>Reflections Match</span>
                         </Link>

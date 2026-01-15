@@ -5,6 +5,7 @@ import { httpsCallable } from 'firebase/functions';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Loader, Sparkles, Zap, Compass, Save, Bookmark, ExternalLink, RefreshCw, Trash2, Edit3, X, Play, CheckCircle, MessageSquare } from 'lucide-react';
 import PursuitCoach from './PursuitCoach';
+import ignitiaLogo from '../assets/ignitia_logo.jpg';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
@@ -342,9 +343,12 @@ const Radar = ({ user }) => {
             <div className="max-w-6xl mx-auto space-y-12">
 
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-center bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row justify-between items-center bg-white p-8 rounded-2xl shadow-sm border border-gray-100 gap-6 md:gap-4">
+
+                    {/* Left Section: Title */}
+                    <div className="w-full md:w-auto md:flex-1 text-center md:text-left">
+                        <h1 className="text-3xl font-bold text-gray-900 flex items-center justify-center md:justify-start gap-3">
                             <Compass className="text-brand" size={32} />
                             The Radar
                         </h1>
@@ -353,15 +357,29 @@ const Radar = ({ user }) => {
                         </p>
                     </div>
 
-                    {/* Ad Placeholder */}
-                    <div className="hidden lg:block mx-auto bg-gray-50 border border-gray-100 rounded-lg px-6 py-2">
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center">Sponsored</p>
-                        <div className="w-48 h-4"></div>
+                    {/* Center Section: Ad Unit */}
+                    <div className="w-full md:w-auto md:flex-1 flex justify-center">
+                        <a
+                            href="https://www.ignitia-ai.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center group no-underline mx-auto"
+                        >
+                            <span className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 group-hover:text-slate-600 transition-colors">
+                                Sponsored by
+                            </span>
+                            <img
+                                src={ignitiaLogo}
+                                alt="Ignitia-AI"
+                                className="h-14 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity"
+                            />
+                        </a>
                     </div>
 
-                    <div className="mt-4 md:mt-0 text-right">
+                    {/* Right Section: Actions */}
+                    <div className="w-full md:w-auto md:flex-1 flex flex-col items-center md:items-end gap-2">
                         {suggestions.length > 0 && (
-                            <p className="text-xs text-gray-400 mb-2">
+                            <p className="text-xs text-gray-400">
                                 Last updated: {lastGenerated?.toLocaleDateString()}
                             </p>
                         )}
