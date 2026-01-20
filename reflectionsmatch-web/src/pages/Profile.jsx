@@ -19,6 +19,9 @@ const Profile = ({ user, reflections = [] }) => {
     const [displayName, setDisplayName] = useState(user?.displayName || '');
     const [photoURL, setPhotoURL] = useState(user?.photoURL || '');
     const [tagline, setTagline] = useState(''); // NEW: Tagline
+    const [careerFocus, setCareerFocus] = useState(''); // NEW: Career Focus
+    const [savingFocus, setSavingFocus] = useState(false); // NEW: Saving status for focus
+    const [focusSaved, setFocusSaved] = useState(false); // NEW: Saved indicator for focus
     const [editedSummary, setEditedSummary] = useState(''); // NEW: Editable AI Summary
     const [isEditing, setIsEditing] = useState(false);
     const [isEditingAnalysis, setIsEditingAnalysis] = useState(false); // NEW: Independent Analysis Edit Mode
@@ -74,6 +77,7 @@ const Profile = ({ user, reflections = [] }) => {
                     const data = docSnap.data();
                     setInterests(data.explicitInterests || []);
                     setTagline(data.tagline || ''); // Fetch tagline
+                    setCareerFocus(data.careerFocus || ''); // Fetch career focus
                     if (data.linkedinProfileData) setLinkedInData(data.linkedinProfileData); // NEW
                     if (data.resumeText) setResumeText(data.resumeText); // Fetch resume text
                     if (data.preferences) setPreferences(data.preferences); // Fetch preferences
@@ -381,6 +385,24 @@ TASK:
         }
     };
 
+    const handleSaveCareerFocus = async () => {
+        setSavingFocus(true);
+        setFocusSaved(false);
+        try {
+            const docRef = doc(db, 'users', user.uid);
+            await setDoc(docRef, { careerFocus }, { merge: true });
+
+            setFocusSaved(true);
+            setTimeout(() => setFocusSaved(false), 3000); // Reset "Saved" after 3s
+            // showToast("North Star saved."); // Optional: remove toast if inline feedback is enough
+        } catch (error) {
+            console.error("Error saving career focus:", error);
+            showToast("Failed to save North Star.");
+        } finally {
+            setSavingFocus(false);
+        }
+    };
+
     if (loading) return <div className="p-8 text-center text-gray-500">Loading profile...</div>;
 
     const handleTestRadar = async () => {
@@ -601,161 +623,204 @@ TASK:
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Data Sources & Inputs */}
-                    <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100 h-full flex flex-col">
-                        <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                            <span className="bg-blue-50 text-blue-600 p-2 rounded-lg">🔌</span>
-                            Data Sources & Inputs
-                        </h2>
-
-                        {/* Connection Status Section - Reordered */}
-                        <div className="space-y-6 mb-8">
-
-                            {/* 1. Proactive Engine: Weekly Radar (Now Top) */}
-                            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                                            <TrendingUp className="w-4 h-4 text-purple-600" />
-                                            Weekly Radar
-                                        </h3>
-                                        <p className="text-xs text-gray-500 mt-1">Receive a weekly AI briefing.</p>
-                                    </div>
-                                    <button
-                                        onClick={toggleRadarPreference}
-                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${preferences.weeklyRadar ? 'bg-purple-600' : 'bg-gray-200'}`}
-                                    >
-                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${preferences.weeklyRadar ? 'translate-x-6' : 'translate-x-1'}`} />
-                                    </button>
-                                </div>
-                                <button
-                                    onClick={handleTestRadar}
-                                    className="mt-4 w-full text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 rounded-lg py-2 hover:bg-purple-50 transition-colors"
-                                >
-                                    Test Radar Now (Dev)
-                                </button>
+                    <div className="flex flex-col gap-6">
+                        {/* 0. North Star Card (Top Priority) */}
+                        {/* --- START NORTH STAR CARD --- */}
+                        <div className="bg-gradient-to-br from-blue-900 to-indigo-900 rounded-xl p-6 shadow-lg mb-6 border border-blue-700/50 relative">
+                            {/* Background decoration */}
+                            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                                <svg className="w-24 h-24 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" /></svg>
                             </div>
 
-                            {/* 2. Connected Data Sources */}
-                            <div className="space-y-3">
-                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Connected Accounts</h3>
+                            <h2 className="text-xl font-bold mb-2 flex items-center gap-2 relative z-10 text-white">
+                                🌟 Your North Star
+                            </h2>
 
-                                {/* LinkedIn Row */}
-                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-[#0077B5] text-white p-2 rounded-lg">
-                                            <Linkedin size={18} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-gray-900">LinkedIn</p>
-                                            <p className="text-xs text-gray-500">{linkedInData ? "Profile Synced" : "Not connected"}</p>
-                                        </div>
-                                    </div>
-                                    {linkedInData ? (
-                                        <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
-                                            <Check size={12} /> Synced
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => setIsLinkedInModalOpen(true)}
-                                            className="text-[#0077B5] text-xs font-bold hover:underline"
-                                        >
-                                            Connect
-                                        </button>
-                                    )}
-                                </div>
+                            <p className="text-blue-200 text-sm mb-4 relative z-10">
+                                What is your primary professional objective right now? This tells the AI what to prioritize.
+                            </p>
 
-                                {/* Resume Row */}
-                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-purple-600 text-white p-2 rounded-lg">
-                                            <FileText size={18} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-gray-900">Resume / Bio</p>
-                                            <p className="text-xs text-gray-500">{resumeText ? "Parsed & Active" : "Not uploaded"}</p>
-                                        </div>
-                                    </div>
-                                    {resumeText ? (
-                                        <div className="flex items-center gap-2">
-                                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
-                                                <Check size={12} /> Parsed
-                                            </span>
-                                            <button
-                                                onClick={() => resumeInputRef.current?.click()}
-                                                className="text-gray-400 hover:text-purple-600"
-                                                title="Re-upload"
-                                            >
-                                                <Upload size={14} />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => resumeInputRef.current?.click()}
-                                            className="text-purple-600 text-xs font-bold hover:underline"
-                                        >
-                                            Upload
-                                        </button>
-                                    )}
+                            <div className="relative z-10">
+                                <textarea
+                                    value={careerFocus}
+                                    onChange={(e) => setCareerFocus(e.target.value)}
+                                    onBlur={handleSaveCareerFocus} // Keep auto-save as backup
+                                    placeholder="e.g. Become the go-to AI architect for enterprise."
+                                    className="w-full bg-slate-950/50 border border-blue-500/30 rounded-lg p-4 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all min-h-[100px] resize-none"
+                                />
+                                {/* BUTTON SECTION - Explicitly rendered here */}
+                                <div className="flex justify-end items-center mt-3 gap-3 w-full">
+                                    {savingFocus && <span className="text-blue-300 text-sm animate-pulse">Saving...</span>}
+                                    {!savingFocus && focusSaved && <span className="text-green-400 text-sm font-bold">✓ Saved</span>}
+                                    <button
+                                        onClick={handleSaveCareerFocus}
+                                        disabled={savingFocus}
+                                        className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-md text-sm font-bold shadow-lg transition-all hover:scale-105"
+                                    >
+                                        Update Focus
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        <h3 className="text-gray-900 font-bold mb-3 flex items-center gap-2">
-                            <span className="bg-yellow-100 text-yellow-600 p-1.5 rounded-lg text-xs">🎯</span>
-                            Manual Interests
-                        </h3>
-
-                        <div className="flex gap-2 mb-6">
-                            <input
-                                type="text"
-                                className="flex-1 border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-brand focus:border-brand focus:outline-none transition-all"
-                                placeholder="Add an interest (comma separated)..."
-                                value={newInterest}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val.includes(',')) {
-                                        const parts = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                                        const newItems = parts.filter(p => !interests.includes(p));
-
-                                        if (newItems.length > 0) {
-                                            const updatedInterests = [...interests, ...newItems];
-                                            setInterests(updatedInterests);
-                                            // Save to firestore immediately for seamless UX
-                                            const docRef = doc(db, 'users', user.uid);
-                                            setDoc(docRef, { explicitInterests: updatedInterests }, { merge: true }).catch(console.error);
-                                        }
-                                        setNewInterest('');
-                                    } else {
-                                        setNewInterest(val);
-                                    }
-                                }}
-                                onKeyPress={(e) => e.key === 'Enter' && addInterest()}
-                            />
+                        {/* Weekly Radar (Standalone) */}
+                        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mb-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                        <TrendingUp className="w-4 h-4 text-purple-600" />
+                                        Weekly Radar
+                                    </h3>
+                                    <p className="text-xs text-gray-500 mt-1">Receive a weekly AI briefing.</p>
+                                </div>
+                                <button
+                                    onClick={toggleRadarPreference}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${preferences.weeklyRadar ? 'bg-purple-600' : 'bg-gray-200'}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${preferences.weeklyRadar ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
                             <button
-                                onClick={addInterest}
-                                className="bg-gray-900 text-white px-4 rounded-lg font-medium hover:bg-black transition-colors"
+                                onClick={handleTestRadar}
+                                className="mt-4 w-full text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-200 rounded-lg py-2 hover:bg-purple-50 transition-colors"
                             >
-                                <Plus size={20} />
+                                Test Radar Now (Dev)
                             </button>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
-                            {interests.map((interest, index) => (
-                                <span key={index} className="bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 group hover:border-red-200 hover:bg-red-50 transition-colors">
-                                    {interest}
-                                    <button
-                                        onClick={() => removeInterest(index)}
-                                        className="text-gray-300 group-hover:text-red-500 transition-colors"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </span>
-                            ))}
-                            {interests.length === 0 && (
-                                <p className="text-gray-400 text-sm italic w-full text-center py-4">
-                                    No interests added yet. What are you tracking?
-                                </p>
-                            )}
+                        <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100 h-full flex flex-col">
+                            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                <span className="bg-blue-50 text-blue-600 p-2 rounded-lg">🔌</span>
+                                Data Sources & Inputs
+                            </h2>
+
+                            {/* Connection Status Section - Reordered */}
+                            <div className="space-y-6 mb-8">
+
+
+
+                                {/* 2. Connected Data Sources */}
+                                <div className="space-y-3">
+                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Connected Accounts</h3>
+
+                                    {/* LinkedIn Row */}
+                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-[#0077B5] text-white p-2 rounded-lg">
+                                                <Linkedin size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-900">LinkedIn</p>
+                                                <p className="text-xs text-gray-500">{linkedInData ? "Profile Synced" : "Not connected"}</p>
+                                            </div>
+                                        </div>
+                                        {linkedInData ? (
+                                            <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                                <Check size={12} /> Synced
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => setIsLinkedInModalOpen(true)}
+                                                className="text-[#0077B5] text-xs font-bold hover:underline"
+                                            >
+                                                Connect
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Resume Row */}
+                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-purple-600 text-white p-2 rounded-lg">
+                                                <FileText size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-900">Resume / Bio</p>
+                                                <p className="text-xs text-gray-500">{resumeText ? "Parsed & Active" : "Not uploaded"}</p>
+                                            </div>
+                                        </div>
+                                        {resumeText ? (
+                                            <div className="flex items-center gap-2">
+                                                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                                    <Check size={12} /> Parsed
+                                                </span>
+                                                <button
+                                                    onClick={() => resumeInputRef.current?.click()}
+                                                    className="text-gray-400 hover:text-purple-600"
+                                                    title="Re-upload"
+                                                >
+                                                    <Upload size={14} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => resumeInputRef.current?.click()}
+                                                className="text-purple-600 text-xs font-bold hover:underline"
+                                            >
+                                                Upload
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h3 className="text-gray-900 font-bold mb-3 flex items-center gap-2">
+                                <span className="bg-yellow-100 text-yellow-600 p-1.5 rounded-lg text-xs">🎯</span>
+                                Manual Interests
+                            </h3>
+
+                            <div className="flex gap-2 mb-6">
+                                <input
+                                    type="text"
+                                    className="flex-1 border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-brand focus:border-brand focus:outline-none transition-all"
+                                    placeholder="Add an interest (comma separated)..."
+                                    value={newInterest}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val.includes(',')) {
+                                            const parts = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                                            const newItems = parts.filter(p => !interests.includes(p));
+
+                                            if (newItems.length > 0) {
+                                                const updatedInterests = [...interests, ...newItems];
+                                                setInterests(updatedInterests);
+                                                // Save to firestore immediately for seamless UX
+                                                const docRef = doc(db, 'users', user.uid);
+                                                setDoc(docRef, { explicitInterests: updatedInterests }, { merge: true }).catch(console.error);
+                                            }
+                                            setNewInterest('');
+                                        } else {
+                                            setNewInterest(val);
+                                        }
+                                    }}
+                                    onKeyPress={(e) => e.key === 'Enter' && addInterest()}
+                                />
+                                <button
+                                    onClick={addInterest}
+                                    className="bg-gray-900 text-white px-4 rounded-lg font-medium hover:bg-black transition-colors"
+                                >
+                                    <Plus size={20} />
+                                </button>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                                {interests.map((interest, index) => (
+                                    <span key={index} className="bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 group hover:border-red-200 hover:bg-red-50 transition-colors">
+                                        {interest}
+                                        <button
+                                            onClick={() => removeInterest(index)}
+                                            className="text-gray-300 group-hover:text-red-500 transition-colors"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </span>
+                                ))}
+                                {interests.length === 0 && (
+                                    <p className="text-gray-400 text-sm italic w-full text-center py-4">
+                                        No interests added yet. What are you tracking?
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
 
