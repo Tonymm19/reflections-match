@@ -47,26 +47,26 @@ const ReflectionCard = ({ imageUrl, notes, timestamp, aiSummary, tags, isAnalyzi
     };
 
     if (source === 'radar') {
-        let styleClass = "border-t-4 border-gray-300";
+        let styleClass = "border-gray-200 border"; // Default border color
         let Icon = Sparkles;
         let badgeColor = "bg-gray-100 text-gray-600";
 
         if (radarType === 'Deep Dive') {
-            styleClass = "border-t-4 border-blue-500 bg-gradient-to-b from-blue-50/50 to-white";
+            styleClass = "border-blue-400 border-2 bg-gradient-to-br from-blue-50 to-white";
             Icon = Compass;
             badgeColor = "bg-blue-100 text-blue-700";
         } else if (radarType === 'Wildcard') {
-            styleClass = "border-t-4 border-purple-500 bg-gradient-to-b from-purple-50/50 to-white";
+            styleClass = "border-purple-400 border-2 bg-gradient-to-br from-purple-50 to-white";
             Icon = Zap;
             badgeColor = "bg-purple-100 text-purple-700";
         } else if (radarType === 'Spark') {
-            styleClass = "border-t-4 border-orange-500 bg-gradient-to-b from-orange-50/50 to-white";
+            styleClass = "border-orange-400 border-2 bg-gradient-to-br from-orange-50 to-white";
             Icon = Sparkles;
             badgeColor = "bg-orange-100 text-orange-700";
         }
 
         return (
-            <div className={`rounded-xl shadow-md p-5 flex flex-col h-full hover:shadow-lg transition-all duration-300 border border-gray-100 relative group ${styleClass}`}>
+            <div className={`rounded-xl shadow-md p-5 flex flex-col h-full hover:shadow-lg transition-all duration-300 relative group ${styleClass}`}>
                 {/* Actions Container */}
                 {/* Actions Container */}
                 <div className="absolute top-2 right-2 flex items-center gap-1 z-10">

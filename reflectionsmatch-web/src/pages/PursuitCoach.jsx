@@ -9,6 +9,8 @@ const PursuitCoach = ({ pursuit, onClose, onDelete }) => {
     const [isStuck, setIsStuck] = useState(false);
     const [updates, setUpdates] = useState([]);
     const [loading, setLoading] = useState(false);
+    // Local status state for dropdown
+    const [status, setStatus] = useState(pursuit.status || 'Not Started');
     const messagesEndRef = useRef(null);
 
     // Auto-scroll to bottom of chat
@@ -88,8 +90,36 @@ const PursuitCoach = ({ pursuit, onClose, onDelete }) => {
             <div className="flex-none p-6 border-b border-slate-100 bg-white z-10">
                 <div className="flex justify-between items-start mb-4">
                     <div>
-                        <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">Active Pursuit</span>
-                        <h2 className="text-2xl font-bold text-slate-800 leading-tight">{pursuit.aiSummary}</h2> {/* CHANGED: pursuit.title -> pursuit.aiSummary */}
+                        <div className="flex items-center gap-3 mb-1">
+                            <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">Active Pursuit</span>
+                            {/* Status Dropdown */}
+                            <select
+                                value={status}
+                                onChange={async (e) => {
+                                    const newStatus = e.target.value;
+                                    setStatus(newStatus);
+                                    try {
+                                        await updateDoc(doc(db, 'reflections', pursuit.id), { status: newStatus });
+                                    } catch (err) {
+                                        console.error("Status update failed", err);
+                                        alert("Failed to update status");
+                                    }
+                                }}
+                                className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border-none cursor-pointer focus:ring-0
+                                    ${(status === 'Completed' || status === 'Complete') ? 'bg-green-100 text-green-700' :
+                                        status === 'Stuck' ? 'bg-red-100 text-red-700' :
+                                            (status === 'In Progress' || status === 'active' || status === 'Active') ? 'bg-yellow-100 text-yellow-700' :
+                                                'bg-gray-100 text-gray-500'}`}
+                            >
+                                <option value="Not Started">Not Started</option>
+                                <option value="active">Active</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Stuck">Stuck</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Archived">Archived</option>
+                            </select>
+                        </div>
+                        <h2 className="text-2xl font-bold text-slate-800 leading-tight">{pursuit.aiSummary}</h2>
                     </div>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>

@@ -143,6 +143,19 @@ const Radar = ({ user }) => {
         }
     };
 
+    // New Function to handle direct status updates from the list
+    const handleStatusChange = async (id, newStatus) => {
+        try {
+            await updateDoc(doc(db, 'reflections', id), {
+                status: newStatus
+            });
+            // Local state update is handled by the real-time listener (onSnapshot)
+        } catch (error) {
+            console.error("Error updating status:", error);
+            alert("Failed to update status.");
+        }
+    };
+
     const [activePursuits, setActivePursuits] = useState([]);
 
     // Modal State
@@ -481,30 +494,49 @@ const Radar = ({ user }) => {
                         <div className="flex flex-col gap-4">
                             {activePursuits.map((item) => {
                                 let badgeColor = "bg-gray-100 text-gray-600";
-                                if (item.radarType === 'Deep Dive') badgeColor = "bg-blue-100 text-blue-700";
-                                if (item.radarType === 'Wildcard') badgeColor = "bg-purple-100 text-purple-700";
-                                if (item.radarType === 'Spark') badgeColor = "bg-orange-100 text-orange-700";
+                                let borderClass = "border-gray-100"; // Default border
+
+                                if (item.radarType === 'Deep Dive') {
+                                    badgeColor = "bg-blue-100 text-blue-700";
+                                    borderClass = "border-blue-400"; // Blue border for Deep Dive
+                                }
+                                if (item.radarType === 'Wildcard') {
+                                    badgeColor = "bg-purple-100 text-purple-700";
+                                    borderClass = "border-purple-400";
+                                }
+                                if (item.radarType === 'Spark') {
+                                    badgeColor = "bg-orange-100 text-orange-700";
+                                    borderClass = "border-orange-400";
+                                }
 
                                 return (
-                                    <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow group">
+                                    <div key={item.id} className={`bg-white rounded-xl p-4 shadow-sm border ${borderClass} flex items-center justify-between hover:shadow-md transition-shadow group border-l-4`}>
                                         <div className="flex items-center gap-4 md:gap-6 flex-1">
-                                            {/* Type Badge */}
-                                            <div className={`w-2 h-12 rounded-full ${badgeColor.split(' ')[0]}`}></div>
 
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-3 mb-1">
                                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${badgeColor}`}>
                                                         {item.radarType || "Radar"}
                                                     </span>
-                                                    {item.status && (
-                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase 
-                                                            ${item.status === 'Completed' ? 'bg-green-100 text-green-700' :
+
+                                                    {/* Status Dropdown */}
+                                                    <select
+                                                        value={item.status || "Not Started"}
+                                                        onChange={(e) => handleStatusChange(item.id, e.target.value)}
+                                                        onClick={(e) => e.stopPropagation()} // Prevent card click
+                                                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border-none cursor-pointer focus:ring-2 focus:ring-brand
+                                                            ${(item.status === 'Completed' || item.status === 'Complete') ? 'bg-green-100 text-green-700' :
                                                                 item.status === 'Stuck' ? 'bg-red-100 text-red-700' :
-                                                                    item.status === 'In Progress' ? 'bg-yellow-100 text-yellow-700' :
-                                                                        'bg-gray-100 text-gray-500'}`}>
-                                                            {item.status}
-                                                        </span>
-                                                    )}
+                                                                    (item.status === 'In Progress' || item.status === 'active') ? 'bg-yellow-100 text-yellow-700' :
+                                                                        'bg-gray-100 text-gray-500'}`}
+                                                    >
+                                                        <option value="Not Started">Not Started</option>
+                                                        <option value="active">Active</option>
+                                                        <option value="In Progress">In Progress</option>
+                                                        <option value="Stuck">Stuck</option>
+                                                        <option value="Completed">Completed</option>
+                                                        <option value="Archived">Archived</option>
+                                                    </select>
                                                 </div>
                                                 <h4 className="text-lg font-bold text-gray-900 truncate pr-4">
                                                     {item.aiSummary || "Untitled Pursuit"}
