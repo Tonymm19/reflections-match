@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
+import logoImg from '../assets/fingerprint_logo.png';
 
 const LandingPage = () => {
     const [isLogin, setIsLogin] = useState(false);
@@ -37,7 +38,7 @@ const LandingPage = () => {
                     <div className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer">
                         <div className="h-12 w-12 flex items-center justify-center">
                             <img
-                                src="/src/assets/fingerprint_logo.png"
+                                src={logoImg}
                                 alt="Reflections Match"
                                 className="h-full w-full object-contain"
                             />
