@@ -6,7 +6,7 @@ import { httpsCallable } from "firebase/functions"; // Import callable
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage, functions } from '../firebase'; // Import functions
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Plus, X, Brain, User, Edit2, Check, Loader, Upload, ExternalLink, FileText, Linkedin, TrendingUp } from 'lucide-react';
+import { Plus, X, Brain, User, Edit2, Check, Loader, Upload, ExternalLink, FileText, Linkedin, TrendingUp, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import LinkedInGuideModal from '../components/LinkedInGuideModal';
 import { parsePdf, parseDocx, parseTxt } from '../utils/fileParsers';
@@ -22,6 +22,9 @@ const Profile = ({ user, reflections = [] }) => {
     const [careerFocus, setCareerFocus] = useState(''); // NEW: Career Focus
     const [savingFocus, setSavingFocus] = useState(false); // NEW: Saving status for focus
     const [focusSaved, setFocusSaved] = useState(false); // NEW: Saved indicator for focus
+    const [creativeFocus, setCreativeFocus] = useState(''); // NEW: Creative Focus
+    const [savingCreativeFocus, setSavingCreativeFocus] = useState(false); // NEW: Saving status for creative focus
+    const [creativeFocusSaved, setCreativeFocusSaved] = useState(false); // NEW: Saved indicator for creative focus
     const [editedSummary, setEditedSummary] = useState(''); // NEW: Editable AI Summary
     const [isEditing, setIsEditing] = useState(false);
     const [isEditingAnalysis, setIsEditingAnalysis] = useState(false); // NEW: Independent Analysis Edit Mode
@@ -78,6 +81,7 @@ const Profile = ({ user, reflections = [] }) => {
                     setInterests(data.explicitInterests || []);
                     setTagline(data.tagline || ''); // Fetch tagline
                     setCareerFocus(data.careerFocus || ''); // Fetch career focus
+                    setCreativeFocus(data.creativeFocus || ''); // Fetch creative focus
                     if (data.linkedinProfileData) setLinkedInData(data.linkedinProfileData); // NEW
                     if (data.resumeText) setResumeText(data.resumeText); // Fetch resume text
                     if (data.preferences) setPreferences(data.preferences); // Fetch preferences
@@ -403,6 +407,23 @@ TASK:
         }
     };
 
+    const handleSaveCreativeFocus = async () => {
+        setSavingCreativeFocus(true);
+        setCreativeFocusSaved(false);
+        try {
+            const docRef = doc(db, 'users', user.uid);
+            await setDoc(docRef, { creativeFocus }, { merge: true });
+
+            setCreativeFocusSaved(true);
+            setTimeout(() => setCreativeFocusSaved(false), 3000); // Reset "Saved" after 3s
+        } catch (error) {
+            console.error("Error saving creative focus:", error);
+            showToast("Failed to save Creative Spark.");
+        } finally {
+            setSavingCreativeFocus(false);
+        }
+    };
+
     if (loading) return <div className="p-8 text-center text-gray-500">Loading profile...</div>;
 
     const handleTestRadar = async () => {
@@ -633,7 +654,7 @@ TASK:
                             </div>
 
                             <h2 className="text-xl font-bold mb-2 flex items-center gap-2 relative z-10 text-white">
-                                🌟 Your North Star
+                                🌟 Professional North Star
                             </h2>
 
                             <p className="text-blue-200 text-sm mb-4 relative z-10">
@@ -658,6 +679,45 @@ TASK:
                                         className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-md text-sm font-bold shadow-lg transition-all hover:scale-105"
                                     >
                                         Update Focus
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* --- CREATIVE SPARK CARD --- */}
+                        <div className="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-xl p-6 shadow-lg mb-6 border border-indigo-500/50 relative">
+                            {/* Background decoration */}
+                            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                                <Sparkles className="w-24 h-24 text-white" />
+                            </div>
+
+                            <h2 className="text-xl font-bold mb-2 flex items-center gap-2 relative z-10 text-white">
+                                <Sparkles size={24} className="text-purple-300" />
+                                Your Creative Spark
+                            </h2>
+
+                            <p className="text-purple-200 text-sm mb-4 relative z-10">
+                                What is your artistic or personal passion? This gives the AI a second dimension of context.
+                            </p>
+
+                            <div className="relative z-10">
+                                <textarea
+                                    value={creativeFocus}
+                                    onChange={(e) => setCreativeFocus(e.target.value)}
+                                    onBlur={handleSaveCreativeFocus}
+                                    placeholder="e.g. Release a Lo-Fi album, Write a Sci-Fi novel, Learn pottery."
+                                    className="w-full bg-slate-950/50 border border-purple-500/30 rounded-lg p-4 text-white placeholder-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all min-h-[100px] resize-none"
+                                />
+                                {/* BUTTON SECTION */}
+                                <div className="flex justify-end items-center mt-3 gap-3 w-full">
+                                    {savingCreativeFocus && <span className="text-purple-300 text-sm animate-pulse">Saving...</span>}
+                                    {!savingCreativeFocus && creativeFocusSaved && <span className="text-green-400 text-sm font-bold">✓ Saved</span>}
+                                    <button
+                                        onClick={handleSaveCreativeFocus}
+                                        disabled={savingCreativeFocus}
+                                        className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-md text-sm font-bold shadow-lg transition-all hover:scale-105"
+                                    >
+                                        Update Spark
                                     </button>
                                 </div>
                             </div>
