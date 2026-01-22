@@ -9,6 +9,7 @@ import Profile from './pages/Profile';
 import Chat from './pages/Chat'; // NEW IMPORT
 import Radar from './pages/Radar';
 import About from './pages/About';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import Navbar from './components/Navbar';
 import { Search, TrendingUp } from 'lucide-react';
 import ReflectionUploader from './components/ReflectionUploader'; // NEW IMPORT
@@ -520,24 +521,32 @@ function App() {
         );
     }
 
-    if (!user) return <LandingPage />;
-
-    // ... (existing imports)
-
-    // ... (App component code)
+    // if (!user) return <LandingPage />; // REMOVED to allow public routes
 
     return (
         <BrowserRouter>
-            <Navbar user={user} />
             <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/dashboard" element={<Dashboard user={user} reflections={reflections} loading={dataLoading} />} />
-                <Route path="/profile" element={<Profile user={user} reflections={reflections} />} />
-                <Route path="/radar" element={<Radar user={user} />} />
-                <Route path="/chat" element={<Chat user={user} />} />
+                {/* Landing Page (No Navbar/Footer) */}
+                <Route path="/" element={!user ? <LandingPage /> : <Navigate to="/dashboard" />} />
+
+                {/* App Shell Routes (Navbar + Content + Footer) */}
+                <Route path="/*" element={
+                    <>
+                        <Navbar user={user} />
+                        <Routes>
+                            <Route path="/about" element={<About />} />
+                            <Route path="/privacy" element={<PrivacyPolicy />} />
+                            <Route path="/dashboard" element={user ? <Dashboard user={user} reflections={reflections} loading={dataLoading} /> : <Navigate to="/" />} />
+                            <Route path="/profile" element={user ? <Profile user={user} reflections={reflections} /> : <Navigate to="/" />} />
+                            <Route path="/radar" element={user ? <Radar user={user} /> : <Navigate to="/" />} />
+                            <Route path="/chat" element={user ? <Chat user={user} /> : <Navigate to="/" />} />
+                            {/* Catch-all for unknown routes -> Redirect to Home */}
+                            <Route path="*" element={<Navigate to="/" />} />
+                        </Routes>
+                        <Footer />
+                    </>
+                } />
             </Routes>
-            <Footer />
         </BrowserRouter>
     );
 }

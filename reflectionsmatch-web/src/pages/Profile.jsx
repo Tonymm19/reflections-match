@@ -469,169 +469,212 @@ TASK:
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* ... rest of render ... */}
 
-                {/* Identity Header */}
-                <div className="bg-white rounded-2xl shadow-sm p-8 flex flex-col md:flex-row items-center gap-8 border border-gray-100">
-                    {/* Photo Upload Interaction */}
-                    <div
-                        className="h-24 w-24 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold text-2xl border-4 border-white shadow-md overflow-hidden relative group cursor-pointer"
-                        onClick={() => fileInputRef.current?.click()}
-                        title="Change Profile Photo"
-                    >
-                        {user?.photoURL ? (
-                            <img src={user.photoURL} alt="Profile" className="h-full w-full object-contain" />
-                        ) : (
-                            <span>{user?.displayName ? user.displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "TM"}</span>
-                        )}
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            {uploadingPhoto ? <Loader className="animate-spin text-white" size={20} /> : <Edit2 size={20} className="text-white" />}
-                        </div>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handlePhotoUpload}
-                            className="hidden"
-                            ref={fileInputRef}
-                            disabled={uploadingPhoto}
-                        />
-                    </div>
-
-
-                    <div className="flex-1 text-center md:text-left w-full">
-                        {isEditing ? (
-                            // ... existing edit view ...
-                            <div className="flex flex-col gap-2 w-full max-w-md mx-auto md:mx-0">
-                                <div className="flex gap-2 items-center">
+                {/* Hero Card: Identity + Interests */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="grid grid-cols-1 lg:grid-cols-2">
+                        {/* LEFT: Identity */}
+                        <div className="p-8 border-b lg:border-b-0 lg:border-r border-gray-100 flex flex-col items-center md:items-start gap-6">
+                            <div className="flex flex-col md:flex-row items-center gap-6 w-full">
+                                {/* Photo Upload Interaction */}
+                                <div
+                                    className="h-24 w-24 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold text-2xl border-4 border-white shadow-md overflow-hidden relative group cursor-pointer shrink-0"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    title="Change Profile Photo"
+                                >
+                                    {user?.photoURL ? (
+                                        <img src={user.photoURL} alt="Profile" className="h-full w-full object-contain" />
+                                    ) : (
+                                        <span>{user?.displayName ? user.displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "TM"}</span>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {uploadingPhoto ? <Loader className="animate-spin text-white" size={20} /> : <Edit2 size={20} className="text-white" />}
+                                    </div>
                                     <input
-                                        type="text"
-                                        placeholder="Display Name"
-                                        value={displayName}
-                                        onChange={(e) => setDisplayName(e.target.value)}
-                                        className="text-xl font-bold text-gray-900 border-b-2 border-brand focus:outline-none bg-transparent px-1 flex-1"
-                                        autoFocus
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handlePhotoUpload}
+                                        className="hidden"
+                                        ref={fileInputRef}
+                                        disabled={uploadingPhoto}
                                     />
-                                    <button
-                                        onClick={handleUpdateProfile}
-                                        disabled={savingProfile}
-                                        className="bg-brand text-white p-2 rounded-lg hover:bg-blue-700 transition shadow-sm"
-                                        title="Save Changes"
-                                    >
-                                        <Check size={18} />
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setIsEditing(false);
-                                            setDisplayName(user?.displayName || '');
-                                            setTagline(user?.tagline || tagline); // Revert tagline
-                                        }}
-                                        className="bg-gray-100 text-gray-500 p-2 rounded-lg hover:bg-gray-200 hover:text-red-500 transition shadow-sm"
-                                        title="Cancel"
-                                    >
-                                        <X size={18} />
-                                    </button>
                                 </div>
-                                <input
-                                    type="text"
-                                    placeholder="Add a tagline..."
-                                    value={tagline}
-                                    onChange={(e) => setTagline(e.target.value)}
-                                    className="text-sm text-gray-600 border-b border-gray-200 focus:border-brand focus:outline-none bg-transparent px-1 py-1 w-full italic"
-                                />
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center md:items-start group">
-                                <div className="flex items-center gap-3">
-                                    <h1 className="text-3xl font-bold text-gray-900">
-                                        {displayName || "Anonymous User"}
-                                    </h1>
-                                    <button
-                                        onClick={() => setIsEditing(true)}
-                                        className="text-gray-400 hover:text-brand transition opacity-0 group-hover:opacity-100"
-                                        title="Edit Name & Tagline"
-                                    >
-                                        <Edit2 size={16} />
-                                    </button>
-                                </div>
-                                <p className="text-gray-500 italic mt-1 min-h-[1.5em] mb-2">
-                                    {tagline || "No tagline set"}
-                                </p>
 
-                                {/* Stats & Level Logic */}
-                                {(() => {
-                                    // Level Calculation Logic
-                                    // Tiers:
-                                    // 0-24: SHADOW
-                                    // 25-49: CLARITY
-                                    // 50-99: RADIANCE
-                                    // 100+: ESSENCE
-
-                                    let levelName = "";
-                                    let nextLevelName = "";
-                                    let levelColor = "";
-                                    let progress = 0;
-                                    let target = 10;
-
-                                    if (currentReflectionCount < 25) {
-                                        levelName = "SHADOW";
-                                        nextLevelName = "Clarity";
-                                        levelColor = "bg-gray-700 text-gray-200 border border-gray-600";
-                                        target = 25;
-                                    } else if (currentReflectionCount < 50) {
-                                        levelName = "CLARITY";
-                                        nextLevelName = "Radiance";
-                                        levelColor = "bg-blue-50 text-blue-600 border border-blue-200";
-                                        target = 50;
-                                    } else if (currentReflectionCount < 100) {
-                                        levelName = "RADIANCE";
-                                        nextLevelName = "Essence";
-                                        levelColor = "bg-yellow-50 text-yellow-600 border border-yellow-200";
-                                        target = 100;
-                                    } else {
-                                        levelName = "ESSENCE";
-                                        levelColor = "bg-gradient-to-r from-cyan-200 via-purple-200 to-yellow-200 text-gray-800 border-none shadow-sm";
-                                        target = 100;
-                                    }
-
-                                    // Cumulative Percentage Logic
-                                    // (Current Total / Next Milestone Target) * 100
-                                    progress = Math.min((currentReflectionCount / target) * 100, 100);
-
-                                    return (
-                                        <div className="w-full mt-4">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${levelColor}`}>
-                                                    {levelName} LEVEL
-                                                </div>
-                                                <span className="text-xs font-bold text-gray-600">
-                                                    {currentReflectionCount} / {currentReflectionCount < 100 ? target : "∞"}
-                                                </span>
-                                            </div>
-                                            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                                                <motion.div
-                                                    className={`h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 ${currentReflectionCount >= 100 ? 'animate-pulse' : ''}`}
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${progress}%` }}
-                                                    transition={{ duration: 1.5, ease: [0.34, 1.56, 0.64, 1] }}
+                                <div className="flex-1 text-center md:text-left w-full">
+                                    {isEditing ? (
+                                        <div className="flex flex-col gap-2 w-full">
+                                            <div className="flex gap-2 items-center justify-center md:justify-start">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Display Name"
+                                                    value={displayName}
+                                                    onChange={(e) => setDisplayName(e.target.value)}
+                                                    className="text-xl font-bold text-gray-900 border-b-2 border-brand focus:outline-none bg-transparent px-1 min-w-[150px]"
+                                                    autoFocus
                                                 />
+                                                <button
+                                                    onClick={handleUpdateProfile}
+                                                    disabled={savingProfile}
+                                                    className="bg-brand text-white p-2 rounded-lg hover:bg-blue-700 transition shadow-sm"
+                                                    title="Save Changes"
+                                                >
+                                                    <Check size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setIsEditing(false);
+                                                        setDisplayName(user?.displayName || '');
+                                                        setTagline(user?.tagline || tagline);
+                                                    }}
+                                                    className="bg-gray-100 text-gray-500 p-2 rounded-lg hover:bg-gray-200 hover:text-red-500 transition shadow-sm"
+                                                    title="Cancel"
+                                                >
+                                                    <X size={18} />
+                                                </button>
                                             </div>
-                                            <p className="text-[10px] text-gray-400 mt-1 text-right">
-                                                {currentReflectionCount === 0
-                                                    ? "0/50 - Start your journey"
-                                                    : currentReflectionCount < 100
-                                                        ? `${currentReflectionCount} reflections captured—${target - currentReflectionCount} more to reach ${nextLevelName}.`
-                                                        : "Essence Synchronized."
-                                                }
+                                            <input
+                                                type="text"
+                                                placeholder="Add a tagline..."
+                                                value={tagline}
+                                                onChange={(e) => setTagline(e.target.value)}
+                                                className="text-sm text-gray-600 border-b border-gray-200 focus:border-brand focus:outline-none bg-transparent px-1 py-1 w-full italic text-center md:text-left"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center md:items-start group">
+                                            <div className="flex items-center gap-3">
+                                                <h1 className="text-3xl font-bold text-gray-900">
+                                                    {displayName || "Anonymous User"}
+                                                </h1>
+                                                <button
+                                                    onClick={() => setIsEditing(true)}
+                                                    className="text-gray-400 hover:text-brand transition opacity-0 group-hover:opacity-100"
+                                                    title="Edit Name & Tagline"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                            </div>
+                                            <p className="text-gray-500 italic mt-1 min-h-[1.5em]">
+                                                {tagline || "No tagline set"}
                                             </p>
                                         </div>
-                                    );
-                                })()}
+                                    )}
+                                </div>
                             </div>
-                        )}
-                        {/* Email removed as requested */}
-                    </div>
 
-                    <div className="text-right">
-                        <div className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg text-sm font-semibold">
-                            {interests.length} Interests
+                            {/* Level Logic (Moved inside Left Column) */}
+                            {(() => {
+                                let levelName = "";
+                                let nextLevelName = "";
+                                let levelColor = "";
+                                let progress = 0;
+                                let target = 10;
+
+                                if (currentReflectionCount < 25) {
+                                    levelName = "SHADOW";
+                                    nextLevelName = "Clarity";
+                                    levelColor = "bg-gray-700 text-gray-200 border border-gray-600";
+                                    target = 25;
+                                } else if (currentReflectionCount < 50) {
+                                    levelName = "CLARITY";
+                                    nextLevelName = "Radiance";
+                                    levelColor = "bg-blue-50 text-blue-600 border border-blue-200";
+                                    target = 50;
+                                } else if (currentReflectionCount < 100) {
+                                    levelName = "RADIANCE";
+                                    nextLevelName = "Essence";
+                                    levelColor = "bg-yellow-50 text-yellow-600 border border-yellow-200";
+                                    target = 100;
+                                } else {
+                                    levelName = "ESSENCE";
+                                    levelColor = "bg-gradient-to-r from-cyan-200 via-purple-200 to-yellow-200 text-gray-800 border-none shadow-sm";
+                                    target = 100;
+                                }
+                                progress = Math.min((currentReflectionCount / target) * 100, 100);
+
+                                return (
+                                    <div className="w-full mt-2">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${levelColor}`}>
+                                                {levelName} LEVEL
+                                            </div>
+                                            <span className="text-xs font-bold text-gray-600">
+                                                {currentReflectionCount} / {currentReflectionCount < 100 ? target : "∞"}
+                                            </span>
+                                        </div>
+                                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                            <motion.div
+                                                className={`h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 ${currentReflectionCount >= 100 ? 'animate-pulse' : ''}`}
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${progress}%` }}
+                                                transition={{ duration: 1.5, ease: [0.34, 1.56, 0.64, 1] }}
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 mt-1 text-right">
+                                            {currentReflectionCount < 100
+                                                ? `${target - currentReflectionCount} more to reach ${nextLevelName}.`
+                                                : "Essence Synchronized."}
+                                        </p>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+
+                        {/* RIGHT: Active Interests */}
+                        <div className="p-8 bg-gray-50/50 flex flex-col h-full">
+                            <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <span className="bg-yellow-100 text-yellow-600 p-1 rounded-md text-xs">🎯</span>
+                                Tracking Interests
+                            </h3>
+
+                            <div className="flex gap-2 mb-4">
+                                <input
+                                    type="text"
+                                    className="flex-1 border border-gray-200 bg-white rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-brand focus:border-brand focus:outline-none transition-all shadow-sm"
+                                    placeholder="Add interest (e.g. AI Agents, Pottery)..."
+                                    value={newInterest}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val.includes(',')) {
+                                            const parts = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                                            const newItems = parts.filter(p => !interests.includes(p));
+                                            if (newItems.length > 0) {
+                                                const updated = [...interests, ...newItems];
+                                                setInterests(updated);
+                                                setDoc(doc(db, 'users', user.uid), { explicitInterests: updated }, { merge: true }).catch(console.error);
+                                            }
+                                            setNewInterest('');
+                                        } else {
+                                            setNewInterest(val);
+                                        }
+                                    }}
+                                    onKeyPress={(e) => e.key === 'Enter' && addInterest()}
+                                />
+                                <button
+                                    onClick={addInterest}
+                                    className="bg-white border border-gray-200 text-gray-700 px-3 rounded-lg hover:bg-gray-50 hover:text-black transition-colors shadow-sm"
+                                >
+                                    <Plus size={18} />
+                                </button>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 content-start overflow-y-auto max-h-[200px] custom-scrollbar">
+                                {interests.map((interest, index) => (
+                                    <span key={index} className="bg-white border border-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 group hover:border-red-200 hover:bg-red-50 transition-colors cursor-default shadow-sm">
+                                        {interest}
+                                        <button
+                                            onClick={() => removeInterest(index)}
+                                            className="text-gray-300 group-hover:text-red-500 transition-colors"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </span>
+                                ))}
+                                {interests.length === 0 && (
+                                    <p className="text-gray-400 text-xs italic py-2">
+                                        No active interests. Add what you're learning or doing.
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -642,9 +685,9 @@ TASK:
                     onClose={() => setIsLinkedInModalOpen(false)}
                 />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Data Sources & Inputs */}
-                    <div className="flex flex-col gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
+                    {/* Data Sources & Inputs (Left Column - Spans 5/12 ~40%) */}
+                    <div className="flex flex-col gap-6 lg:col-span-5">
                         {/* 0. North Star Card (Top Priority) */}
                         {/* --- START NORTH STAR CARD --- */}
                         <div className="bg-gradient-to-br from-blue-900 to-indigo-900 rounded-xl p-6 shadow-lg mb-6 border border-blue-700/50 relative">
@@ -824,68 +867,11 @@ TASK:
                                 </div>
                             </div>
 
-                            <h3 className="text-gray-900 font-bold mb-3 flex items-center gap-2">
-                                <span className="bg-yellow-100 text-yellow-600 p-1.5 rounded-lg text-xs">🎯</span>
-                                Manual Interests
-                            </h3>
-
-                            <div className="flex gap-2 mb-6">
-                                <input
-                                    type="text"
-                                    className="flex-1 border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-brand focus:border-brand focus:outline-none transition-all"
-                                    placeholder="Add an interest (comma separated)..."
-                                    value={newInterest}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (val.includes(',')) {
-                                            const parts = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                                            const newItems = parts.filter(p => !interests.includes(p));
-
-                                            if (newItems.length > 0) {
-                                                const updatedInterests = [...interests, ...newItems];
-                                                setInterests(updatedInterests);
-                                                // Save to firestore immediately for seamless UX
-                                                const docRef = doc(db, 'users', user.uid);
-                                                setDoc(docRef, { explicitInterests: updatedInterests }, { merge: true }).catch(console.error);
-                                            }
-                                            setNewInterest('');
-                                        } else {
-                                            setNewInterest(val);
-                                        }
-                                    }}
-                                    onKeyPress={(e) => e.key === 'Enter' && addInterest()}
-                                />
-                                <button
-                                    onClick={addInterest}
-                                    className="bg-gray-900 text-white px-4 rounded-lg font-medium hover:bg-black transition-colors"
-                                >
-                                    <Plus size={20} />
-                                </button>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                                {interests.map((interest, index) => (
-                                    <span key={index} className="bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 group hover:border-red-200 hover:bg-red-50 transition-colors">
-                                        {interest}
-                                        <button
-                                            onClick={() => removeInterest(index)}
-                                            className="text-gray-300 group-hover:text-red-500 transition-colors"
-                                        >
-                                            <X size={14} />
-                                        </button>
-                                    </span>
-                                ))}
-                                {interests.length === 0 && (
-                                    <p className="text-gray-400 text-sm italic w-full text-center py-4">
-                                        No interests added yet. What are you tracking?
-                                    </p>
-                                )}
-                            </div>
                         </div>
                     </div>
 
-                    {/* AI Analysis */}
-                    <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden h-full min-h-[600px] flex flex-col">
+                    {/* AI Analysis (Right Column - Spans 7/12 ~60%) */}
+                    <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden h-full min-h-[600px] flex flex-col lg:col-span-7">
                         <div className="absolute top-0 right-0 p-8 opacity-10">
                             <Brain size={200} />
                         </div>
@@ -994,7 +980,7 @@ TASK:
                     </div>
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 
